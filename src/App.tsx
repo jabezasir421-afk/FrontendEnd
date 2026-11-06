@@ -10,6 +10,7 @@ import { CustomerDashboard } from './components/CustomerDashboard';
 import { WorkerDashboard } from './components/WorkerDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AuthModal } from './components/AuthModal';
+import { NotificationDrawer } from './components/NotificationDrawer';
 import { WorkerProfile, Category, Address } from './types';
 import { api } from './services/api';
 
@@ -22,6 +23,8 @@ export const App: React.FC = () => {
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(1);
+  const [isNotificationOpen, setIsNotificationOpen] = useState<boolean>(false);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -39,12 +42,23 @@ export const App: React.FC = () => {
   // Load initial data
   const loadInitialData = async () => {
     try {
-      const [cats, addrs] = await Promise.all([
+      const [cats, addrs, notifs] = await Promise.all([
         api.getCategories(),
         api.getMyAddresses(),
+        api.getNotifications(),
       ]);
       setCategories(cats);
       setSavedAddresses(addrs);
+      setUnreadNotifCount(notifs.filter(n => !n.read).length);
+    } catch {
+      // fallback
+    }
+  };
+
+  const refreshNotifCount = async () => {
+    try {
+      const notifs = await api.getNotifications();
+      setUnreadNotifCount(notifs.filter(n => !n.read).length);
     } catch {
       // fallback
     }
@@ -93,6 +107,8 @@ export const App: React.FC = () => {
         currentTab={currentTab}
         onSelectTab={(tab) => setCurrentTab(tab)}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenNotifications={() => setIsNotificationOpen(true)}
+        unreadNotifCount={unreadNotifCount}
       />
 
       {/* Main Content Areas */}
@@ -109,6 +125,55 @@ export const App: React.FC = () => {
                 if (workers[0]) setBookingWorker(workers[0]);
               }}
             />
+
+            {/* 6 Disciplines Modular Selection Grid */}
+            <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 2rem 2.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.75rem' }}>
+                <span className="eyebrow" style={{ fontSize: '0.75rem', margin: 0 }}>
+                  TAXONOMY QUICK FILTER // 6 RECOGNIZED DISCIPLINES
+                </span>
+                {selectedCategory && (
+                  <button
+                    type="button"
+                    style={{ background: 'none', border: 'none', fontSize: '0.75rem', textDecoration: 'underline', cursor: 'pointer', color: 'var(--red)', fontWeight: 600 }}
+                    onClick={() => setSelectedCategory('')}
+                  >
+                    CLEAR SELECTION [×]
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.75rem' }}>
+                {categories.map((c, i) => {
+                  const isSelected = selectedCategory === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(isSelected ? '' : c.id)}
+                      style={{
+                        border: isSelected ? '2px solid var(--red)' : '1px solid var(--black)',
+                        background: isSelected ? 'var(--black)' : 'var(--white)',
+                        color: isSelected ? 'var(--white)' : 'var(--black)',
+                        padding: '1rem 0.75rem',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 150ms ease',
+                      }}
+                    >
+                      <span className="mono-num" style={{ fontSize: '0.7rem', display: 'block', color: isSelected ? 'var(--red)' : 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                        0{i + 1}
+                      </span>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 700, lineHeight: '1.2' }}>
+                        {c.name.split(' ')[0]}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '0.25rem', opacity: 0.8 }}>
+                        {c.workerCount || 10} specialists
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* Filtering Control Bar */}
             <SearchFilter
@@ -216,6 +281,13 @@ export const App: React.FC = () => {
           onClose={() => setIsAuthOpen(false)}
         />
       )}
+
+      {/* Notifications Drawer */}
+      <NotificationDrawer
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+        onNotificationRead={refreshNotifCount}
+      />
 
       {/* Swiss Modernism 2.0 Systematic Footer */}
       <footer style={{ borderTop: '1px solid var(--black)', background: 'var(--white)', padding: '3.5rem 2rem 2.5rem' }}>

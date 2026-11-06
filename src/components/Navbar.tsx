@@ -6,9 +6,17 @@ interface NavbarProps {
   currentTab: string;
   onSelectTab: (tab: string) => void;
   onOpenAuth: () => void;
+  onOpenNotifications: () => void;
+  unreadNotifCount: number;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenAuth }) => {
+export const Navbar: React.FC<NavbarProps> = ({ 
+  currentTab, 
+  onSelectTab, 
+  onOpenAuth,
+  onOpenNotifications,
+  unreadNotifCount
+}) => {
   const { user, role, switchRole, logout, isBackendOnline, refreshBackendStatus } = useAuth();
 
   return (
@@ -127,6 +135,24 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, onSelectTab, onOpenA
               </button>
             ))}
           </div>
+
+          {/* Notifications Trigger Button */}
+          <button
+            type="button"
+            className="button button--sm button--outline"
+            onClick={onOpenNotifications}
+            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            aria-label={`Open notifications, ${unreadNotifCount} unread`}
+          >
+            <span>ALERTS</span>
+            {unreadNotifCount > 0 ? (
+              <span style={{ background: 'var(--red)', color: 'var(--white)', padding: '0.1rem 0.35rem', fontSize: '0.7rem', fontWeight: 700 }}>
+                {unreadNotifCount}
+              </span>
+            ) : (
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>0</span>
+            )}
+          </button>
 
           {/* User / Auth trigger */}
           {user ? (

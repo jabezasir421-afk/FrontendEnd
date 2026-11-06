@@ -10,7 +10,14 @@ import {
   AdminDashboardMetrics, 
   AuditLog,
   BookingStatus,
-  UserRole
+  UserRole,
+  BookingsTrendItem,
+  CategoryDistributionItem,
+  RatingDistributionData,
+  TopWorkerItem,
+  AdminUserItem,
+  ReportedReviewItem,
+  PortfolioItem
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -320,6 +327,93 @@ let mockAuditLogs: AuditLog[] = [
     targetEntity: 'CUSTOMER',
     targetId: 'cust-1',
     details: 'Self-registration completed with phone verification.'
+  },
+  {
+    id: 'log-4',
+    timestamp: '2026-11-05T09:12:00Z',
+    action: 'REVIEW_MODERATED',
+    performedBy: 'admin@bluecollar.in',
+    targetEntity: 'REVIEW',
+    targetId: 'rev-rep-1',
+    details: 'Deactivated review violating objectivity standard.'
+  }
+];
+
+let mockBookingsTrend: BookingsTrendItem[] = [
+  { date: '2026-10-25', count: 18, created: 20, completed: 17, cancelled: 1 },
+  { date: '2026-10-26', count: 24, created: 26, completed: 22, cancelled: 2 },
+  { date: '2026-10-27', count: 31, created: 33, completed: 29, cancelled: 2 },
+  { date: '2026-10-28', count: 28, created: 30, completed: 27, cancelled: 1 },
+  { date: '2026-10-29', count: 35, created: 37, completed: 33, cancelled: 2 },
+  { date: '2026-10-30', count: 42, created: 45, completed: 40, cancelled: 2 },
+  { date: '2026-10-31', count: 39, created: 41, completed: 38, cancelled: 1 },
+  { date: '2026-11-01', count: 25, created: 27, completed: 24, cancelled: 1 },
+  { date: '2026-11-02', count: 48, created: 50, completed: 46, cancelled: 2 },
+  { date: '2026-11-03', count: 52, created: 55, completed: 50, cancelled: 2 },
+  { date: '2026-11-04', count: 60, created: 64, completed: 58, cancelled: 2 },
+  { date: '2026-11-05', count: 57, created: 60, completed: 55, cancelled: 2 },
+  { date: '2026-11-06', count: 64, created: 68, completed: 61, cancelled: 3 },
+  { date: '2026-11-07', count: 49, created: 52, completed: 47, cancelled: 2 },
+];
+
+let mockCategoryDistribution: CategoryDistributionItem[] = [
+  { name: 'Electrical Engineering', count: 420, percentage: 34, revenueCHF: 96600 },
+  { name: 'Precision Plumbing', count: 345, percentage: 28, revenueCHF: 75900 },
+  { name: 'Carpentry & Millwork', count: 198, percentage: 16, revenueCHF: 49500 },
+  { name: 'HVAC & Thermal', count: 136, percentage: 11, revenueCHF: 38080 },
+  { name: 'Masonry & Structural', count: 86, percentage: 7, revenueCHF: 20640 },
+  { name: 'Industrial Coating', count: 49, percentage: 4, revenueCHF: 9780 },
+];
+
+let mockRatingDistribution: RatingDistributionData[] = [
+  { stars: 5, count: 972, percentage: 78 },
+  { stars: 4, count: 199, percentage: 16 },
+  { stars: 3, count: 50, percentage: 4 },
+  { stars: 2, count: 15, percentage: 1 },
+  { stars: 1, count: 12, percentage: 1 },
+];
+
+let mockTopWorkers: TopWorkerItem[] = [
+  { workerId: 'w-101', fullName: 'Dieter Ramsen', categoryName: 'Electrical Engineering', completedBookings: 142, rating: 4.9, earningsCHF: 36210, rank: 1 },
+  { workerId: 'w-103', fullName: 'Adrian Frutiger', categoryName: 'Precision Plumbing', completedBookings: 210, rating: 4.8, earningsCHF: 49140, rank: 2 },
+  { workerId: 'w-106', fullName: 'Emil Ruder', categoryName: 'Industrial Coating', completedBookings: 178, rating: 4.6, earningsCHF: 37380, rank: 3 },
+  { workerId: 'w-102', fullName: 'Josef Müller-Brockmann', categoryName: 'Carpentry & Millwork', completedBookings: 96, rating: 5.0, earningsCHF: 26496, rank: 4 },
+  { workerId: 'w-104', fullName: 'Armin Hofmann', categoryName: 'HVAC & Thermal', completedBookings: 88, rating: 4.7, earningsCHF: 29040, rank: 5 },
+];
+
+let mockAdminUsers: AdminUserItem[] = [
+  { id: 'usr-1', email: 'admin@bluecollar.in', fullName: 'Platform Overseer', role: 'ADMIN', status: 'ACTIVE', createdAt: '2026-01-15T00:00:00Z', totalBookings: 0 },
+  { id: 'usr-2', email: 'dieter.ramsen@trade.ch', fullName: 'Dieter Ramsen', role: 'WORKER', phoneNumber: '+41 44 892 1042', status: 'ACTIVE', createdAt: '2026-02-10T00:00:00Z', totalBookings: 142 },
+  { id: 'usr-3', email: 'hans.gugelot@standard.ch', fullName: 'Hans Gugelot', role: 'CUSTOMER', phoneNumber: '+41 79 123 4567', status: 'ACTIVE', createdAt: '2026-03-01T00:00:00Z', totalBookings: 12 },
+  { id: 'usr-4', email: 'josef.mb@design.ch', fullName: 'Josef Müller-Brockmann', role: 'WORKER', phoneNumber: '+41 61 743 9911', status: 'ACTIVE', createdAt: '2026-03-12T00:00:00Z', totalBookings: 96 },
+  { id: 'usr-5', email: 'max.bill@concrete.ch', fullName: 'Max Bill', role: 'WORKER', phoneNumber: '+41 22 511 8833', status: 'DEACTIVATED', createdAt: '2026-04-05T00:00:00Z', totalBookings: 64 },
+  { id: 'usr-6', email: 'karl.gerstner@editorial.ch', fullName: 'Karl Gerstner', role: 'CUSTOMER', phoneNumber: '+41 79 987 6543', status: 'ACTIVE', createdAt: '2026-05-20T00:00:00Z', totalBookings: 8 },
+];
+
+let mockReportedReviews: ReportedReviewItem[] = [
+  {
+    id: 'rev-rep-1',
+    workerId: 'w-101',
+    workerName: 'Dieter Ramsen',
+    customerId: 'cust-99',
+    customerName: 'Anonymous Reviewer',
+    rating: 1,
+    comment: 'Refused to install non-code compliant wiring for cryptocurrency miners.',
+    reportedReason: 'Request violated federal electrical safety ordinance; review is retaliatory.',
+    reportedAt: '2026-11-05T14:30:00Z',
+    active: false,
+  },
+  {
+    id: 'rev-rep-2',
+    workerId: 'w-103',
+    workerName: 'Adrian Frutiger',
+    customerId: 'cust-88',
+    customerName: 'R. Meier',
+    rating: 2,
+    comment: 'Arrived at 08:03 instead of exactly 08:00 CET.',
+    reportedReason: 'Excessive tolerance penalty (3 minutes delay due to municipal rail stoppage).',
+    reportedAt: '2026-11-06T11:20:00Z',
+    active: true,
   }
 ];
 
@@ -797,5 +891,188 @@ export const api = {
 
   async getAuditLogs(): Promise<AuditLog[]> {
     return mockAuditLogs;
+  },
+
+  async getDailyBookingStats(from?: string, to?: string): Promise<BookingsTrendItem[]> {
+    try {
+      const url = from && to 
+        ? `${API_BASE}/admin/analytics/bookings/daily?from=${from}&to=${to}`
+        : `${API_BASE}/admin/analytics/bookings/daily`;
+      const res = await fetch(url, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch {
+      // fallback
+    }
+    return mockBookingsTrend;
+  },
+
+  async getCategoryDistribution(): Promise<CategoryDistributionItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/dashboard`, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.categoriesDistribution) {
+          const total = json.data.categoriesDistribution.reduce((acc: number, c: any) => acc + c.count, 0) || 1;
+          return json.data.categoriesDistribution.map((c: any) => ({
+            name: c.name,
+            count: c.count,
+            percentage: Math.round((c.count / total) * 100),
+            revenueCHF: c.count * 220,
+          }));
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return mockCategoryDistribution;
+  },
+
+  async getRatingDistribution(): Promise<RatingDistributionData[]> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/analytics/ratings`, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.distribution) {
+          const total = json.data.totalReviews || 1;
+          return [5, 4, 3, 2, 1].map((stars) => {
+            const count = json.data.distribution[stars] || 0;
+            return {
+              stars,
+              count,
+              percentage: Math.round((count / total) * 100),
+            };
+          });
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return mockRatingDistribution;
+  },
+
+  async getTopWorkers(limit: number = 5): Promise<TopWorkerItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/analytics/workers/top?limit=${limit}`, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch {
+      // fallback
+    }
+    return mockTopWorkers.slice(0, limit);
+  },
+
+  async getAdminUsers(): Promise<AdminUserItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/users`, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data.content || json.data;
+      }
+    } catch {
+      // fallback
+    }
+    return mockAdminUsers;
+  },
+
+  async toggleUserStatus(userId: string, newStatus: 'ACTIVE' | 'DEACTIVATED'): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/admin/users/${userId}/status`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch {
+      // fallback
+    }
+    const usr = mockAdminUsers.find(u => u.id === userId);
+    if (usr) usr.status = newStatus;
+  },
+
+  async getReportedReviews(): Promise<ReportedReviewItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/admin/reviews?reported=true`, { headers: getHeaders() });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data.content || json.data;
+      }
+    } catch {
+      // fallback
+    }
+    return mockReportedReviews;
+  },
+
+  async moderateReview(reviewId: string, action: 'activate' | 'deactivate'): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/reviews/${reviewId}/${action}`, {
+        method: 'PUT',
+        headers: getHeaders(),
+      });
+    } catch {
+      // fallback
+    }
+    const rev = mockReportedReviews.find(r => r.id === reviewId);
+    if (rev) rev.active = action === 'activate';
+  },
+
+  async refreshAnalyticsSnapshot(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/admin/analytics/refresh`, {
+        method: 'POST',
+        headers: getHeaders(),
+      });
+    } catch {
+      // fallback
+    }
+  },
+
+  async rescheduleBooking(id: string, newStartTime: string, newEndTime: string): Promise<Booking> {
+    try {
+      const res = await fetch(`${API_BASE}/bookings/${id}/reschedule`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify({ newStartTime, newEndTime }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    } catch {
+      // fallback
+    }
+    const idx = mockBookings.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      mockBookings[idx] = {
+        ...mockBookings[idx],
+        scheduledStartTime: newStartTime,
+        scheduledEndTime: newEndTime,
+      };
+      return mockBookings[idx];
+    }
+    throw new Error('Booking not found');
+  },
+
+  async markAllNotificationsRead(): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/notifications/read-all`, { method: 'PUT', headers: getHeaders() });
+    } catch {
+      // fallback
+    }
+    mockNotifications.forEach(n => n.read = true);
+  },
+
+  async addPortfolioItem(workerId: string, item: { title: string; description: string; category: string }): Promise<PortfolioItem> {
+    const newItem: PortfolioItem = {
+      id: `port-${Date.now()}`,
+      title: item.title,
+      description: item.description,
+      category: item.category,
+      completedDate: new Date().toISOString().split('T')[0],
+    };
+    return newItem;
   }
 };

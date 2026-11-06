@@ -45,11 +45,26 @@ The frontend interfaces directly with the Spring Boot backend (`/api/v1`):
    - Dispatch order lifecycle control (Accept, Reject, Start Work, Complete Delivery with final invoice).
    - Profile audit score meter (95% completion).
    - Real-time online heartbeat and bookable availability toggles.
-6. **Platform Administration Console (`/api/v1/admin/dashboard`, `/api/v1/admin/workers`)**
-   - Executive metrics: Lifetime Volume, Gross Revenue, Active Specialists, Quality Tolerance Rate.
-   - Worker verification and accreditation queue (Verify / Unverify actions).
-   - Immutable system audit trail log viewer (`/api/v1/admin/audit-logs`).
-7. **Identity Authentication (`/api/v1/auth`)**
+6. **Platform Administration & Telemetry Console (`/api/v1/admin/*`)**
+   - **01 // Overview & KPIs**: Executive telemetry cards (Lifetime Volume, Gross Revenue, Active Specialists, Quality Tolerance).
+   - **02 // Analytics & Charts**:
+     - *14-Day Dispatch Trajectory*: Strict Swiss SVG coordinate chart showing daily created vs completed dispatches with hairline guidelines.
+     - *Rating Distribution Histogram*: 5-star to 1-star frequency bars with mathematical percentage indicators.
+     - *Category Market Share Density*: Horizontal proportion bars mapping revenue volume by trade discipline.
+     - *Performance Leaderboard*: Top commissioned specialists ranking with settled earnings CHF.
+     - *Cache Refresh*: Trigger manual analytics snapshot recalculation (`POST /admin/analytics/refresh`).
+   - **03 // Specialist Verification**: Complete accreditation queue with Verify/Unverify toggles.
+   - **04 // Review Moderation**: Disputed client rating queue with violation explanations and deactivate/restore controls (`/admin/reviews`).
+   - **05 // User Directory**: Platform user management with role filtering (Customer, Worker, Admin) and account suspension/restoration (`/admin/users`).
+   - **06 // Immutable Audit Trail**: Chronological event ledger tracking all governance actions (`/admin/audit-logs`).
+7. **In-App Notification Center (`/api/v1/notifications`)**
+   - Live dispatch alerts drawer with unread count badge, mark-read, and mark-all-audited actions.
+8. **Scheduling & Portfolio Enhancements**
+   - Reschedule booking modal with datetime adjustment (`PUT /bookings/{id}/reschedule`).
+   - Tradesman portfolio item registration (bumps profile integrity to 100%).
+   - Weekly operating schedule matrix with shift toggles per workday.
+   - 6 recognized trade disciplines quick taxonomy filter matrix.
+9. **Identity Authentication (`/api/v1/auth`)**
    - Sign in, customer registration, and worker registration.
    - Role View Selector and 1-Click Evaluation Shortcuts for instant testing.
    - Automatic live backend health detection with seamless fallback demo runtime.

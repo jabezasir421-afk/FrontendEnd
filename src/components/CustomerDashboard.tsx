@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Booking, Address, BookingStatus } from '../types';
 import { api } from '../services/api';
+import { RescheduleModal } from './RescheduleModal';
+import { useAuth } from '../context/AuthContext';
 
 export const CustomerDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -13,6 +16,9 @@ export const CustomerDashboard: React.FC = () => {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
+
+  // Reschedule state
+  const [reschedulingBooking, setReschedulingBooking] = useState<Booking | null>(null);
 
   // New address state
   const [showAddressForm, setShowAddressForm] = useState<boolean>(false);
@@ -209,13 +215,22 @@ export const CustomerDashboard: React.FC = () => {
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--rule)', paddingTop: '0.75rem', justifyContent: 'flex-end' }}>
                   {b.status === 'PENDING' && (
-                    <button
-                      type="button"
-                      className="button button--sm button--danger"
-                      onClick={() => handleCancelBooking(b.id)}
-                    >
-                      REVOKE DISPATCH
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="button button--sm button--outline"
+                        onClick={() => setReschedulingBooking(b)}
+                      >
+                        RESCHEDULE
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--sm button--danger"
+                        onClick={() => handleCancelBooking(b.id)}
+                      >
+                        REVOKE DISPATCH
+                      </button>
+                    </>
                   )}
 
                   {b.status === 'COMPLETED' && (
@@ -394,6 +409,18 @@ export const CustomerDashboard: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Reschedule Modal */}
+      {reschedulingBooking && (
+        <RescheduleModal
+          booking={reschedulingBooking}
+          onClose={() => setReschedulingBooking(null)}
+          onSuccess={() => {
+            setReschedulingBooking(null);
+            loadData();
+          }}
+        />
       )}
     </div>
   );

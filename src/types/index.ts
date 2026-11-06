@@ -166,3 +166,66 @@ export interface AuditLog {
   targetId: string;
   details: string;
 }
+
+export interface BookingsTrendItem {
+  date: string;
+  count: number;
+  created: number;
+  completed: number;
+  cancelled: number;
+}
+
+export interface CategoryDistributionItem {
+  name: string;
+  count: number;
+  percentage: number;
+  revenueCHF: number;
+}
+
+export interface RatingDistributionData {
+  stars: number;
+  count: number;
+  percentage: number;
+}
+
+export interface TopWorkerItem {
+  workerId: string;
+  fullName: string;
+  categoryName: string;
+  completedBookings: number;
+  rating: number;
+  earningsCHF: number;
+  rank: number;
+}
+
+export interface AdminUserItem {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  phoneNumber?: string;
+  status: 'ACTIVE' | 'DEACTIVATED';
+  createdAt: string;
+  totalBookings: number;
+}
+
+export interface ReportedReviewItem {
+  id: string;
+  workerId: string;
+  workerName: string;
+  customerId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  reportedReason: string;
+  reportedAt: string;
+  active: boolean;
+}
+
+export interface CustomerProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  profilePhotoUrl?: string;
+}

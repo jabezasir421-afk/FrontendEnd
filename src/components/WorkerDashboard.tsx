@@ -7,6 +7,30 @@ export const WorkerDashboard: React.FC = () => {
   const [onlineStatus, setOnlineStatus] = useState<boolean>(true);
   const [bookableStatus, setBookableStatus] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
+  const [completionPercent, setCompletionPercent] = useState<number>(95);
+
+  // Portfolio modal
+  const [showPortfolioModal, setShowPortfolioModal] = useState<boolean>(false);
+  const [projectTitle, setProjectTitle] = useState<string>('');
+  const [projectCategory, setProjectCategory] = useState<string>('Electrical Engineering & Installation');
+  const [projectDesc, setProjectDesc] = useState<string>('');
+  const [portfolioList, setPortfolioList] = useState<{ title: string; category: string; description: string }[]>([
+    {
+      title: 'Commercial Laboratory Main Power Distribution',
+      category: 'Electrical Engineering & Installation',
+      description: 'Complete replacement of 400A busbar system and DIN rail distribution with integrated surge arrestors.',
+    }
+  ]);
+
+  // Working Hours schedule state
+  const [shifts, setShifts] = useState<{ [day: string]: { enabled: boolean; start: string; end: string } }>({
+    'Monday': { enabled: true, start: '08:00', end: '17:00' },
+    'Tuesday': { enabled: true, start: '08:00', end: '17:00' },
+    'Wednesday': { enabled: true, start: '08:00', end: '17:00' },
+    'Thursday': { enabled: true, start: '08:00', end: '17:00' },
+    'Friday': { enabled: true, start: '08:00', end: '17:00' },
+    'Saturday': { enabled: false, start: '09:00', end: '13:00' },
+  });
 
   // Complete job modal
   const [completingBooking, setCompletingBooking] = useState<Booking | null>(null);
@@ -250,7 +274,7 @@ export const WorkerDashboard: React.FC = () => {
             </div>
 
             <div style={{ height: '8px', background: 'var(--white)', border: '1px solid var(--black)', marginBottom: '1rem' }}>
-              <div style={{ width: '95%', height: '100%', background: 'var(--black)' }} />
+              <div style={{ width: `${completionPercent}%`, height: '100%', background: 'var(--black)', transition: 'width 300ms ease' }} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem' }}>
@@ -266,10 +290,61 @@ export const WorkerDashboard: React.FC = () => {
                 <span>✓ Verified Identity Document</span>
                 <strong>VERIFIED</strong>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--red)' }}>
-                <span>! Portfolio Before/After Shots</span>
-                <strong>+5% REMAINING</strong>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: completionPercent === 100 ? '#16A34A' : 'var(--red)' }}>
+                <span>{completionPercent === 100 ? '✓' : '!'} Portfolio Project Artifacts</span>
+                <strong>{completionPercent === 100 ? '100% COMPLETE' : '+5% REMAINING'}</strong>
               </div>
+            </div>
+
+            {completionPercent < 100 && (
+              <button
+                type="button"
+                className="button button--sm button--outline"
+                style={{ marginTop: '1rem' }}
+                onClick={() => setShowPortfolioModal(true)}
+              >
+                + REGISTER PROJECT ARTIFACT
+              </button>
+            )}
+          </div>
+
+          {/* Operating Hours Shifts Matrix */}
+          <div className="swiss-card">
+            <h3 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>
+              Weekly Operating Schedule
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Toggle active dispatch shifts for each workday.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {Object.entries(shifts).map(([day, shift]) => (
+                <div key={day} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', borderBottom: '1px solid var(--rule)', paddingBottom: '0.35rem' }}>
+                  <span style={{ fontWeight: 600 }}>{day}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="mono-num" style={{ color: shift.enabled ? 'var(--black)' : 'var(--text-muted)' }}>
+                      {shift.enabled ? `${shift.start} – ${shift.end}` : 'OFFLINE'}
+                    </span>
+                    <button
+                      type="button"
+                      style={{
+                        padding: '0.15rem 0.4rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        border: '1px solid var(--black)',
+                        background: shift.enabled ? 'var(--black)' : 'var(--white)',
+                        color: shift.enabled ? 'var(--white)' : 'var(--black)',
+                        cursor: 'pointer'
+                      }}
+                      onClick={() => setShifts(prev => ({
+                        ...prev,
+                        [day]: { ...prev[day], enabled: !prev[day].enabled }
+                      }))}
+                    >
+                      {shift.enabled ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -328,6 +403,100 @@ export const WorkerDashboard: React.FC = () => {
                   className="button"
                 >
                   SIGN OFF & COMPLETE JOB
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Portfolio Item Upload Modal */}
+      {showPortfolioModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="portfolio-modal-title">
+          <div className="modal-dialog">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!projectTitle.trim() || !projectDesc.trim()) return;
+              setPortfolioList(prev => [...prev, { title: projectTitle, category: projectCategory, description: projectDesc }]);
+              setCompletionPercent(100);
+              setShowPortfolioModal(false);
+              setProjectTitle('');
+              setProjectDesc('');
+              alert('Portfolio artifact registered. Profile integrity verified at 100%.');
+            }}>
+              <div className="modal-header">
+                <div>
+                  <span className="eyebrow" style={{ margin: 0 }}>PORTFOLIO ACCREDITATION // FORM 501</span>
+                  <h3 id="portfolio-modal-title" style={{ marginTop: '0.2rem' }}>
+                    Register Workmanship Artifact
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="button button--sm button--outline"
+                  onClick={() => setShowPortfolioModal(false)}
+                >
+                  DISMISS
+                </button>
+              </div>
+
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="project-title" className="form-label">Project Title & Identification</label>
+                  <input
+                    id="project-title"
+                    type="text"
+                    className="input"
+                    required
+                    placeholder="e.g. Three-Phase Industrial Feeder Retrofit"
+                    value={projectTitle}
+                    onChange={(e) => setProjectTitle(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="project-cat" className="form-label">Discipline</label>
+                  <select
+                    id="project-cat"
+                    className="select"
+                    value={projectCategory}
+                    onChange={(e) => setProjectCategory(e.target.value)}
+                  >
+                    <option value="Electrical Engineering & Installation">Electrical Engineering</option>
+                    <option value="Precision Plumbing & Sanitary">Precision Plumbing</option>
+                    <option value="Carpentry & Architectural Millwork">Carpentry & Millwork</option>
+                    <option value="HVAC & Thermal Systems">HVAC & Thermal Systems</option>
+                    <option value="Masonry & Structural Restoration">Masonry & Structural</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label htmlFor="project-desc" className="form-label">Technical Scope Description</label>
+                  <textarea
+                    id="project-desc"
+                    className="textarea"
+                    rows={4}
+                    required
+                    placeholder="Describe engineering specifications, tolerances, DIN standards adhered to, and materials used..."
+                    value={projectDesc}
+                    onChange={(e) => setProjectDesc(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="button button--outline"
+                  onClick={() => setShowPortfolioModal(false)}
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  className="button"
+                >
+                  SAVE & BUMP SCORE TO 100%
                 </button>
               </div>
             </form>
