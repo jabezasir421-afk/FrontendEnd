@@ -3,9 +3,12 @@ import { Booking, Address, BookingStatus } from '../types';
 import { api } from '../services/api';
 import { RescheduleModal } from './RescheduleModal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { Skeleton } from './SkeletonLoader';
 
 export const CustomerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
@@ -49,12 +52,20 @@ export const CustomerDashboard: React.FC = () => {
   }, []);
 
   const handleCancelBooking = async (id: string) => {
-    if (!window.confirm('Confirm cancellation of this dispatched service request?')) return;
     try {
       await api.updateBookingStatus(id, 'cancel', 'Customer requested cancellation via portal');
+      showToast({
+        type: 'info',
+        title: 'Dispatch Order Revoked',
+        message: `Service order #${id.toUpperCase()} has been formally cancelled.`
+      });
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Error cancelling booking');
+      showToast({
+        type: 'error',
+        title: 'Cancellation Failed',
+        message: err.message || 'Could not revoke booking.'
+      });
     }
   };
 
@@ -69,11 +80,20 @@ export const CustomerDashboard: React.FC = () => {
         postalCode: newPostal,
         isDefault,
       });
+      showToast({
+        type: 'success',
+        title: 'Job Site Registered',
+        message: `${newStreet}, ${newCity} saved to location ledger.`
+      });
       setShowAddressForm(false);
       setNewStreet('');
       await loadData();
     } catch {
-      alert('Failed to register address');
+      showToast({
+        type: 'error',
+        title: 'Registration Rejected',
+        message: 'Could not record new site address.'
+      });
     }
   };
 
@@ -88,11 +108,19 @@ export const CustomerDashboard: React.FC = () => {
         rating: reviewRating,
         comment: reviewComment,
       });
-      alert('Review and quality assessment submitted.');
+      showToast({
+        type: 'success',
+        title: 'Quality Audit Logged',
+        message: `Assessment score of ★ ${reviewRating}.0 recorded in public register.`
+      });
       setReviewBooking(null);
       setReviewComment('');
     } catch {
-      alert('Failed to submit review');
+      showToast({
+        type: 'error',
+        title: 'Audit Submission Failed',
+        message: 'Failed to record customer review.'
+      });
     } finally {
       setSubmittingReview(false);
     }
@@ -155,7 +183,10 @@ export const CustomerDashboard: React.FC = () => {
         </div>
 
         {loading ? (
-          <p style={{ color: 'var(--text-muted)' }}>Retrieving system dispatch records...</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <Skeleton height="160px" />
+            <Skeleton height="160px" />
+          </div>
         ) : filteredBookings.length === 0 ? (
           <div style={{ border: '1px solid var(--rule)', padding: '3rem', textAlign: 'center', background: 'var(--gray)' }}>
             <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>No orders found for current filter criteria.</p>

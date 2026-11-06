@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { SearchFilter } from './components/SearchFilter';
 import { WorkerCard } from './components/WorkerCard';
+import { WorkerCardSkeleton } from './components/SkeletonLoader';
 import { WorkerDetailModal } from './components/WorkerDetailModal';
 import { BookingModal } from './components/BookingModal';
 import { CustomerDashboard } from './components/CustomerDashboard';
@@ -102,6 +103,11 @@ export const App: React.FC = () => {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Accessible Skip Link */}
+      <a href="#main-content" className="skip-link">
+        SKIP TO MAIN CONTENT [TAB]
+      </a>
+
       {/* Navigation Header */}
       <Navbar
         currentTab={currentTab}
@@ -112,7 +118,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Content Areas */}
-      <main style={{ flex: 1 }}>
+      <main id="main-content" tabIndex={-1} style={{ flex: 1, outline: 'none' }}>
         {currentTab === 'directory' && (
           <>
             {/* Swiss Hero */}
@@ -211,8 +217,10 @@ export const App: React.FC = () => {
               </div>
 
               {loading ? (
-                <div style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  Querying certified trade index...
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.75rem' }}>
+                  <div style={{ gridColumn: 'span 4' }}><WorkerCardSkeleton /></div>
+                  <div style={{ gridColumn: 'span 4' }}><WorkerCardSkeleton /></div>
+                  <div style={{ gridColumn: 'span 4' }}><WorkerCardSkeleton /></div>
                 </div>
               ) : workers.length === 0 ? (
                 <div style={{ border: '1px solid var(--rule)', padding: '4rem', textAlign: 'center', background: 'var(--gray)' }}>

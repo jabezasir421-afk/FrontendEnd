@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkerProfile, Address } from '../types';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 interface BookingModalProps {
   worker: WorkerProfile;
@@ -10,6 +11,7 @@ interface BookingModalProps {
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({ worker, savedAddresses, onClose, onSuccess }) => {
+  const { showToast } = useToast();
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-09');
   const [selectedTime, setSelectedTime] = useState<string>('09:00');
   const [estimatedHours, setEstimatedHours] = useState<number>(3);
@@ -24,6 +26,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({ worker, savedAddress
 
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleAddressSelect = (id: string) => {
     setSelectedAddressId(id);
@@ -62,6 +72,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({ worker, savedAddress
         state,
         postalCode,
         notes: notes.trim() || undefined,
+      });
+      showToast({
+        type: 'success',
+        title: 'Dispatch Order Transmitted',
+        message: `Order assigned to ${worker.fullName} for ${selectedDate} at ${selectedTime} CET.`
       });
       onSuccess();
     } catch {

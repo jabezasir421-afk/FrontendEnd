@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Booking } from '../types';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
 interface RescheduleModalProps {
   booking: Booking;
@@ -9,9 +10,18 @@ interface RescheduleModalProps {
 }
 
 export const RescheduleModal: React.FC<RescheduleModalProps> = ({ booking, onClose, onSuccess }) => {
+  const { showToast } = useToast();
   const [newDate, setNewDate] = useState<string>('2026-11-12');
   const [newTime, setNewTime] = useState<string>('10:00');
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleReschedule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +30,18 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({ booking, onClo
       const startIso = new Date(`${newDate}T${newTime}:00`).toISOString();
       const endIso = new Date(new Date(`${newDate}T${newTime}:00`).getTime() + 3 * 60 * 60 * 1000).toISOString();
       await api.rescheduleBooking(booking.id, startIso, endIso);
+      showToast({
+        type: 'success',
+        title: 'Dispatch Order Rescheduled',
+        message: `Order #${booking.id.toUpperCase()} successfully rescheduled to ${newDate} at ${newTime} CET.`
+      });
       onSuccess();
     } catch {
-      alert('Failed to reschedule dispatch order.');
+      showToast({
+        type: 'error',
+        title: 'Reschedule Rejected',
+        message: 'Failed to reschedule dispatch order.'
+      });
     } finally {
       setSubmitting(false);
     }

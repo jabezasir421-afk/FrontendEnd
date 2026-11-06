@@ -14,6 +14,14 @@ export const WorkerDetailModal: React.FC<WorkerDetailModalProps> = ({ worker, on
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {

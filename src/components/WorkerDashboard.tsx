@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Booking, BookingStatus } from '../types';
 import { api } from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { Skeleton } from './SkeletonLoader';
 
 export const WorkerDashboard: React.FC = () => {
+  const { showToast } = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [onlineStatus, setOnlineStatus] = useState<boolean>(true);
   const [bookableStatus, setBookableStatus] = useState<boolean>(true);
@@ -55,9 +58,24 @@ export const WorkerDashboard: React.FC = () => {
   const handleAction = async (id: string, action: 'accept' | 'reject' | 'start' | 'complete', reason?: string) => {
     try {
       await api.updateBookingStatus(id, action, reason);
+      const actionLabels = {
+        accept: 'Dispatch Accepted & Confirmed',
+        reject: 'Dispatch Commission Declined',
+        start: 'Site Execution In Progress',
+        complete: 'Job Marked Delivered',
+      };
+      showToast({
+        type: action === 'reject' ? 'info' : 'success',
+        title: actionLabels[action] || 'Order Updated',
+        message: `Order #${id.toUpperCase()} successfully transitioned to ${action.toUpperCase()}.`
+      });
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Operation failed');
+      showToast({
+        type: 'error',
+        title: 'Status Update Rejected',
+        message: err.message || 'Operation failed'
+      });
     }
   };
 
@@ -66,10 +84,19 @@ export const WorkerDashboard: React.FC = () => {
     if (!completingBooking) return;
     try {
       await api.updateBookingStatus(completingBooking.id, 'complete');
+      showToast({
+        type: 'success',
+        title: 'Work Completed & Invoiced',
+        message: `Final delivery confirmed for ${completingBooking.customerName}. Payment escrow cleared.`
+      });
       setCompletingBooking(null);
       await loadData();
     } catch {
-      alert('Failed to complete booking');
+      showToast({
+        type: 'error',
+        title: 'Completion Failed',
+        message: 'Could not record final delivery sign-off.'
+      });
     }
   };
 
@@ -107,7 +134,10 @@ export const WorkerDashboard: React.FC = () => {
         </div>
 
         {loading ? (
-          <p style={{ color: 'var(--text-muted)' }}>Synchronizing assigned dispatches...</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <Skeleton height="160px" />
+            <Skeleton height="160px" />
+          </div>
         ) : bookings.length === 0 ? (
           <div style={{ border: '1px solid var(--rule)', padding: '3rem', textAlign: 'center', background: 'var(--gray)' }}>
             <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>No active dispatches currently assigned.</p>
@@ -422,7 +452,11 @@ export const WorkerDashboard: React.FC = () => {
               setShowPortfolioModal(false);
               setProjectTitle('');
               setProjectDesc('');
-              alert('Portfolio artifact registered. Profile integrity verified at 100%.');
+              showToast({
+                type: 'success',
+                title: 'Artifact Registered',
+                message: 'Workmanship artifact added. Profile accreditation score elevated to 100%.'
+              });
             }}>
               <div className="modal-header">
                 <div>

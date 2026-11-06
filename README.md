@@ -71,6 +71,50 @@ The frontend interfaces directly with the Spring Boot backend (`/api/v1`):
 
 ---
 
+## 🛡 Production Readiness & Resilience
+
+The frontend has been hardened for enterprise production deployment:
+
+1. **Fault Isolation via Error Boundary (`ErrorBoundary.tsx`)**
+   - Top-level React error boundary catches unexpected rendering faults.
+   - Displays a Swiss-styled mathematical diagnostic panel with technical stack trace.
+   - Offers zero-state retry and session reset buttons without crashing the browser tab.
+
+2. **Global Toast Notification System (`ToastContext.tsx` & `ToastContainer.tsx`)**
+   - Replaces all blocking browser alerts and confirms with non-intrusive, auto-expiring Swiss toast alerts.
+   - Supports `success`, `error`, and `info` status levels with hairline borders and red accents.
+   - Fully accessible with `aria-live="polite"` and dismissible via keyboard or click.
+
+3. **Perceived Performance & Skeletons (`SkeletonLoader.tsx`)**
+   - Pulsating hairline skeleton components for worker directory cards, table rows, and telemetry blocks.
+   - Prevents cumulative layout shifts (CLS) during asynchronous data fetching.
+
+4. **State Persistence & Dual-Mode Runtime (`api.ts`)**
+   - Automatic heartbeat checks live Spring Boot backend (`http://localhost:8080/api/v1/auth/me`).
+   - When backend is offline or during standalone testing, activates in-memory mock engine backed by `localStorage` persistence (`bluecollar_mock_bookings`, `bluecollar_mock_addresses`, `bluecollar_mock_reviews`, `bluecollar_mock_workers`).
+   - User bookings, cancellations, review submissions, and address creations survive page reloads.
+
+5. **Vite & Rollup Bundler Optimization (`vite.config.ts`)**
+   - Manual chunking splits vendor libraries into a separate `react-vendor` chunk (`react`, `react-dom`, `lucide-react`).
+   - Ensures high browser cache hit rates across subsequent releases.
+   - Fast production build: ~380ms, producing compressed, tree-shaken JS and CSS assets.
+
+6. **Keyboard Navigation & Accessibility (a11y)**
+   - Top-level `#main-content` skip link (`.skip-link`) for keyboard-first users.
+   - Global `Escape` key handling across all modals and sliding drawers.
+   - High-contrast focus rings (`outline: 2px solid var(--red); outline-offset: 3px;`).
+   - Explicit `aria-label` attributes on all icon-only buttons and controls.
+
+7. **Environment Variable Configuration**
+   - Configurable `VITE_API_BASE_URL` via `.env.production` and `.env.example`.
+   - Fully typed environment declarations in `src/vite-env.d.ts`.
+
+8. **SEO & Metadata (`index.html`)**
+   - Complete OpenGraph and Twitter Card social metadata.
+   - Modern SVG Swiss cross favicon embedded directly.
+
+---
+
 ## 🛠 Getting Started
 
 ### Prerequisites

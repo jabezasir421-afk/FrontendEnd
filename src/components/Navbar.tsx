@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Nav Links */}
-          <nav aria-label="Main Navigation" style={{ display: 'flex', gap: '0.5rem' }}>
+          <nav className="nav-desktop" aria-label="Main Navigation">
             <button
               type="button"
               className={`nav-link ${currentTab === 'directory' ? 'nav-link--active' : ''}`}
@@ -75,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Right Status & Role Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <div className="header-right">
           {/* Backend Status indicator */}
           <button
             type="button"

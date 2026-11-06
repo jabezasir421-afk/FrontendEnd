@@ -17,5 +17,17 @@ export default defineConfig({
         secure: false,
       }
     }
+  },
+  build: {
+    target: 'es2020',
+    sourcemap: false,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+        }
+      }
+    }
   }
 });

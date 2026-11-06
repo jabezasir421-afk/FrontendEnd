@@ -14,10 +14,12 @@ import { api } from '../services/api';
 import { AdminCharts } from './AdminCharts';
 import { AdminUserManagement } from './AdminUserManagement';
 import { AdminReviewModeration } from './AdminReviewModeration';
+import { useToast } from '../context/ToastContext';
 
 type AdminTab = 'overview' | 'charts' | 'workers' | 'reviews' | 'users' | 'audit';
 
 export const AdminDashboard: React.FC = () => {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [metrics, setMetrics] = useState<AdminDashboardMetrics | null>(null);
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
@@ -71,9 +73,18 @@ export const AdminDashboard: React.FC = () => {
   const handleToggleVerify = async (workerId: string, currentStatus: boolean) => {
     try {
       await api.toggleWorkerVerification(workerId, !currentStatus);
+      showToast({
+        type: !currentStatus ? 'success' : 'info',
+        title: !currentStatus ? 'Accreditation Granted' : 'Accreditation Revoked',
+        message: `Worker #${workerId} verification status updated to ${!currentStatus ? 'VERIFIED' : 'UNVERIFIED'}.`
+      });
       await loadData();
     } catch {
-      alert('Verification update failed');
+      showToast({
+        type: 'error',
+        title: 'Audit Update Failed',
+        message: 'Could not alter worker accreditation status.'
+      });
     }
   };
 
@@ -82,9 +93,17 @@ export const AdminDashboard: React.FC = () => {
     try {
       await api.refreshAnalyticsSnapshot();
       await loadData();
-      alert('Analytics cache and mathematical snapshots successfully refreshed.');
+      showToast({
+        type: 'success',
+        title: 'Telemetry Synchronized',
+        message: 'Analytics cache and mathematical snapshots successfully refreshed.'
+      });
     } catch {
-      alert('Snapshot refresh failed');
+      showToast({
+        type: 'error',
+        title: 'Snapshot Failed',
+        message: 'Could not re-index platform statistics.'
+      });
     } finally {
       setRefreshing(false);
     }
@@ -93,18 +112,36 @@ export const AdminDashboard: React.FC = () => {
   const handleToggleUserStatus = async (userId: string, newStatus: 'ACTIVE' | 'DEACTIVATED') => {
     try {
       await api.toggleUserStatus(userId, newStatus);
+      showToast({
+        type: newStatus === 'ACTIVE' ? 'success' : 'info',
+        title: 'Account Status Altered',
+        message: `User account #${userId} is now ${newStatus}.`
+      });
       await loadData();
     } catch {
-      alert('Failed to update user account status');
+      showToast({
+        type: 'error',
+        title: 'Status Update Blocked',
+        message: 'Failed to update user account status.'
+      });
     }
   };
 
   const handleModerateReview = async (reviewId: string, action: 'activate' | 'deactivate') => {
     try {
       await api.moderateReview(reviewId, action);
+      showToast({
+        type: action === 'activate' ? 'success' : 'info',
+        title: action === 'activate' ? 'Review Re-instated' : 'Review Deactivated',
+        message: `Review #${reviewId} has been ${action === 'activate' ? 'unhidden' : 'suppressed from public calculations'}.`
+      });
       await loadData();
     } catch {
-      alert('Failed to moderate review');
+      showToast({
+        type: 'error',
+        title: 'Moderation Error',
+        message: 'Failed to execute moderation action.'
+      });
     }
   };
 

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Category } from '../types';
+import { useToast } from '../context/ToastContext';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -10,7 +11,16 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, categories }) => {
   const { login, switchRole } = useAuth();
+  const { showToast } = useToast();
   const [tab, setTab] = useState<'LOGIN' | 'REG_CUSTOMER' | 'REG_WORKER'>('LOGIN');
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Form states
   const [email, setEmail] = useState<string>('');
@@ -31,14 +41,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, categories }) => 
     try {
       if (tab === 'LOGIN') {
         await login(email, password);
+        showToast({
+          type: 'success',
+          title: 'Identity Authenticated',
+          message: `Logged in successfully as ${email}.`
+        });
         onClose();
       } else if (tab === 'REG_CUSTOMER') {
         await api.registerCustomer({ email, password, fullName, phoneNumber });
         await login(email, password);
+        showToast({
+          type: 'success',
+          title: 'Account Registered',
+          message: `Welcome, ${fullName}. Customer profile established.`
+        });
         onClose();
       } else if (tab === 'REG_WORKER') {
         await api.registerWorker({ email, password, fullName, phoneNumber, categoryId, hourlyRate, city });
         await login(email, password);
+        showToast({
+          type: 'success',
+          title: 'Specialist Enrolled',
+          message: `Welcome, ${fullName}. Trade profile submitted for ISO accreditation.`
+        });
         onClose();
       }
     } catch (err: any) {
@@ -50,6 +75,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, categories }) => 
 
   const quickAuth = (role: 'CUSTOMER' | 'WORKER' | 'ADMIN') => {
     switchRole(role);
+    showToast({
+      type: 'info',
+      title: 'Context Switched',
+      message: `Active perspective set to ${role}.`
+    });
     onClose();
   };
 

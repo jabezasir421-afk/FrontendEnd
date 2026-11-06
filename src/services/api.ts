@@ -20,7 +20,7 @@ import {
   PortfolioItem
 } from '../types';
 
-const API_BASE = '/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Token Management
 export const getToken = (): string | null => localStorage.getItem('bluecollar_token');
@@ -41,6 +41,24 @@ const getHeaders = (): HeadersInit => {
   return headers;
 };
 
+// Persistence Helpers for Offline/Demo Mode
+const loadPersisted = <T>(key: string, defaultVal: T): T => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : defaultVal;
+  } catch {
+    return defaultVal;
+  }
+};
+
+const savePersisted = <T>(key: string, val: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(val));
+  } catch {
+    // ignore
+  }
+};
+
 // Initial Mock Dataset for Offline/Evaluation Demonstration
 let mockCategories: Category[] = [
   { id: 'cat-1', name: 'Electrical Engineering & Installation', description: 'Certified commercial and domestic electrical services, rewiring, inspections', active: true, workerCount: 14 },
@@ -51,7 +69,7 @@ let mockCategories: Category[] = [
   { id: 'cat-6', name: 'Industrial Coating & Painting', description: 'Interior/exterior architectural coatings, epoxy floor surfaces, prep work', active: true, workerCount: 12 },
 ];
 
-let mockWorkers: WorkerProfile[] = [
+let mockWorkers: WorkerProfile[] = loadPersisted('bluecollar_mock_workers', [
   {
     id: 'w-101',
     fullName: 'Dieter Ramsen',
@@ -166,9 +184,9 @@ let mockWorkers: WorkerProfile[] = [
     completedJobsCount: 178,
     phoneNumber: '+41 41 688 2390',
   }
-];
+]);
 
-let mockBookings: Booking[] = [
+let mockBookings: Booking[] = loadPersisted('bluecollar_mock_bookings', [
   {
     id: 'bk-2024-001',
     workerId: 'w-101',
@@ -228,9 +246,9 @@ let mockBookings: Booking[] = [
     estimatedPrice: 220.00,
     createdAt: '2026-11-06T18:00:00Z',
   }
-];
+]);
 
-let mockAddresses: Address[] = [
+let mockAddresses: Address[] = loadPersisted('bluecollar_mock_addresses', [
   {
     id: 'addr-1',
     customerId: 'cust-1',
@@ -252,9 +270,9 @@ let mockAddresses: Address[] = [
     isDefault: false,
     active: true,
   }
-];
+]);
 
-let mockReviews: Review[] = [
+let mockReviews: Review[] = loadPersisted('bluecollar_mock_reviews', [
   {
     id: 'rev-1',
     workerId: 'w-101',
@@ -279,7 +297,7 @@ let mockReviews: Review[] = [
     active: true,
     reported: false
   }
-];
+]);
 
 let mockNotifications: NotificationItem[] = [
   {
@@ -684,6 +702,7 @@ export const api = {
       createdAt: new Date().toISOString(),
     };
     mockBookings = [newBooking, ...mockBookings];
+    savePersisted('bluecollar_mock_bookings', mockBookings);
     return newBooking;
   },
 
@@ -717,6 +736,7 @@ export const api = {
         cancellationReason: reason,
         completedAt: targetStatus === 'COMPLETED' ? new Date().toISOString() : undefined,
       };
+      savePersisted('bluecollar_mock_bookings', mockBookings);
       return mockBookings[bookingIndex];
     }
     throw new Error('Booking not found');
@@ -780,6 +800,7 @@ export const api = {
       reported: false,
     };
     mockReviews = [newRev, ...mockReviews];
+    savePersisted('bluecollar_mock_reviews', mockReviews);
     return newRev;
   },
 
@@ -818,6 +839,7 @@ export const api = {
       active: true,
     };
     mockAddresses.push(newAddr);
+    savePersisted('bluecollar_mock_addresses', mockAddresses);
     return newAddr;
   },
 
@@ -886,6 +908,7 @@ export const api = {
     const worker = mockWorkers.find(w => w.id === workerId);
     if (worker) {
       worker.verified = verify;
+      savePersisted('bluecollar_mock_workers', mockWorkers);
     }
   },
 
@@ -1051,6 +1074,7 @@ export const api = {
         scheduledStartTime: newStartTime,
         scheduledEndTime: newEndTime,
       };
+      savePersisted('bluecollar_mock_bookings', mockBookings);
       return mockBookings[idx];
     }
     throw new Error('Booking not found');
