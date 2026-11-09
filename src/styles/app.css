@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-primary: #2563eb;
+    --color-primary-dark: #1d4ed8;
+    --color-primary-light: #60a5fa;
+    --color-customer: #059669;
+    --color-worker: #d97706;
+    --surface-bg: #f8fafc;
+    --surface-card: #ffffff;
+    --border-subtle: #e2e8f0;
+  }
+
+  body {
+    background-color: var(--surface-bg);
+    color: #0f172a;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom utility classes */
+.badge-pending {
+  @apply bg-amber-50 text-amber-700 border-amber-200;
+}
+.badge-accepted {
+  @apply bg-blue-50 text-blue-700 border-blue-200;
+}
+.badge-in-progress {
+  @apply bg-indigo-50 text-indigo-700 border-indigo-200;
+}
+.badge-completed {
+  @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+}
+.badge-cancelled {
+  @apply bg-slate-100 text-slate-700 border-slate-200;
+}
+.badge-rejected {
+  @apply bg-rose-50 text-rose-700 border-rose-200;
+}

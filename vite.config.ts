@@ -1,33 +1,23 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), sveltekit()],
   server: {
-    port: 3000,
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true
       },
-      '/actuator': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-        secure: false,
+      '/ws': {
+        target: 'ws://127.0.0.1:8080',
+        ws: true
       }
     }
   },
-  build: {
-    target: 'es2020',
-    sourcemap: false,
-    chunkSizeWarningLimit: 600,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-        }
-      }
-    }
+  test: {
+    include: ['src/**/*.{test,spec}.{js,ts}', 'tests/**/*.{test,spec}.{js,ts}']
   }
 });
