@@ -18,7 +18,24 @@ export class ApiError extends Error {
   }
 }
 
-// In-memory token management with localStorage sync
+/**
+ * Token Storage Security Architecture & Trade-offs:
+ * 
+ * In this single-page application (SPA), authentication tokens (JWT access and refresh tokens)
+ * are stored in memory with client persistence in `localStorage`.
+ * 
+ * Trade-offs:
+ * - LocalStorage Persistence: Allows session continuity across browser reloads and navigation
+ *   without requiring server-side session cookies.
+ * - XSS Vulnerability: Because localStorage is accessible to JavaScript running in the application's
+ *   origin, any Cross-Site Scripting (XSS) vulnerability could potentially read stored tokens.
+ * - Alternative (HttpOnly SameSite Cookies): Offers superior defense against XSS token exfiltration,
+ *   but requires the backend Spring Boot service to issue Set-Cookie headers on /auth/login and
+ *   /auth/refresh, read tokens from cookies in its JwtAuthenticationFilter, and implement CSRF mitigation.
+ * - Current backend contract: Spring Boot exposes stateless REST endpoints returning JWTs in the
+ *   response body and requiring `Authorization: Bearer <accessToken>` in request headers. Client-side
+ *   token storage is therefore necessary to interact with the verified backend API.
+ */
 const TOKEN_KEY = 'bc_access_token';
 const REFRESH_TOKEN_KEY = 'bc_refresh_token';
 
@@ -44,19 +61,44 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
-
-function onRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
+interface RefreshSubscriber {
+  resolve: (token: string) => void;
+  reject: (error: Error) => void;
 }
 
-function addRefreshSubscriber(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+let refreshSubscribers: RefreshSubscriber[] = [];
+
+function onRefreshed(token: string) {
+  const subscribers = refreshSubscribers;
+  refreshSubscribers = [];
+  subscribers.forEach((sub) => {
+    try {
+      sub.resolve(token);
+    } catch {
+      // Ignored
+    }
+  });
+}
+
+function onRefreshFailed(error: Error) {
+  const subscribers = refreshSubscribers;
+  refreshSubscribers = [];
+  subscribers.forEach((sub) => {
+    try {
+      sub.reject(error);
+    } catch {
+      // Ignored
+    }
+  });
 }
 
 export async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     clearTokens();
@@ -65,37 +107,45 @@ export async function refreshAccessToken(): Promise<string | null> {
 
   const baseUrl = import.meta.env.PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
 
-  try {
-    const response = await fetch(`${baseUrl}/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: JSON.stringify({ refreshToken })
-    });
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${baseUrl}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        clearTokens();
+        return null;
+      }
+
+      const data: ApiResponse<{ accessToken: string; refreshToken: string }> = await response.json();
+      if (data.success && data.data?.accessToken) {
+        setTokens(data.data.accessToken, data.data.refreshToken);
+        return data.data.accessToken;
+      }
       clearTokens();
       return null;
+    } catch {
+      clearTokens();
+      return null;
+    } finally {
+      refreshPromise = null;
+      isRefreshing = false;
     }
+  })();
 
-    const data: ApiResponse<{ accessToken: string; refreshToken: string }> = await response.json();
-    if (data.success && data.data?.accessToken) {
-      setTokens(data.data.accessToken, data.data.refreshToken);
-      return data.data.accessToken;
-    }
-    clearTokens();
-    return null;
-  } catch {
-    clearTokens();
-    return null;
-  }
+  return refreshPromise;
 }
 
 export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null | (string | number)[]>;
   skipAuth?: boolean;
+  _retry?: boolean;
 }
 
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -132,49 +182,80 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   }
 
   // Handle body
-  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+  let requestBody = options.body;
+  if (requestBody && typeof requestBody === 'object' && !(requestBody instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
-    options.body = JSON.stringify(options.body);
+    requestBody = JSON.stringify(requestBody);
   }
 
   const response = await fetch(url.toString(), {
     ...options,
-    headers
+    headers,
+    body: requestBody
   });
 
   // Handle 401 Unauthorized -> Refresh Token Flow
-  if (response.status === 401 && !options.skipAuth && getRefreshToken()) {
+  const isAuthEndpoint = cleanEndpoint.startsWith('/auth/refresh') || cleanEndpoint.startsWith('/auth/login');
+  const canAttemptRefresh =
+    response.status === 401 &&
+    !options.skipAuth &&
+    !options._retry &&
+    !isAuthEndpoint &&
+    !!getRefreshToken();
+
+  if (canAttemptRefresh) {
     if (!isRefreshing) {
       isRefreshing = true;
-      const newToken = await refreshAccessToken();
-      isRefreshing = false;
-
-      if (newToken) {
-        onRefreshed(newToken);
-        headers.set('Authorization', `Bearer ${newToken}`);
-        const retryResponse = await fetch(url.toString(), {
-          ...options,
-          headers
-        });
-        return handleResponse<T>(retryResponse);
-      } else {
-        // Refresh failed, emit auth state change
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:expired'));
+      try {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          onRefreshed(newToken);
+          headers.set('Authorization', `Bearer ${newToken}`);
+          const retryResponse = await fetch(url.toString(), {
+            ...options,
+            headers,
+            body: requestBody,
+            _retry: true
+          } as RequestOptions);
+          return handleResponse<T>(retryResponse);
+        } else {
+          const refreshErr = new ApiError({
+            status: 401,
+            error: 'UNAUTHORIZED',
+            message: 'Session expired. Please log in again.'
+          });
+          onRefreshFailed(refreshErr);
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:expired'));
+          }
+          throw refreshErr;
         }
+      } catch (err) {
+        const errorToThrow = err instanceof Error ? err : new Error(String(err));
+        onRefreshFailed(errorToThrow);
+        throw errorToThrow;
+      } finally {
+        isRefreshing = false;
       }
     } else {
-      // Queue until refresh finishes
-      return new Promise((resolve, reject) => {
-        addRefreshSubscriber(async (newToken: string) => {
-          try {
-            headers.set('Authorization', `Bearer ${newToken}`);
-            const retryResponse = await fetch(url.toString(), {
-              ...options,
-              headers
-            });
-            resolve(await handleResponse<T>(retryResponse));
-          } catch (err) {
+      // Refresh in flight: queue request until resolved or rejected
+      return new Promise<T>((resolve, reject) => {
+        refreshSubscribers.push({
+          resolve: async (newToken: string) => {
+            try {
+              headers.set('Authorization', `Bearer ${newToken}`);
+              const retryResponse = await fetch(url.toString(), {
+                ...options,
+                headers,
+                body: requestBody,
+                _retry: true
+              } as RequestOptions);
+              resolve(await handleResponse<T>(retryResponse));
+            } catch (err) {
+              reject(err);
+            }
+          },
+          reject: (err: Error) => {
             reject(err);
           }
         });
@@ -216,6 +297,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   if (isJson) {
     const json: ApiResponse<T> = await response.json();
+    if (json && typeof json === 'object' && 'success' in json && !json.success) {
+      throw new ApiError({
+        status: response.status,
+        message: json.message || 'Operation failed'
+      });
+    }
     return json.data;
   }
 

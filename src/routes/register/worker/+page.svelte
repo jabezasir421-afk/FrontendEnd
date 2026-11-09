@@ -27,8 +27,6 @@
   let hourlyRate = $state<number>(350);
   let experienceYears = $state<number>(3);
   let bio = $state('');
-  let primaryCity = $state('');
-  let primaryState = $state('');
 
   let categories = $state<CategoryResponse[]>([]);
   let skills = $state<SkillResponse[]>([]);
@@ -78,9 +76,7 @@
       skillIds: selectedSkillIds,
       hourlyRate: Number(hourlyRate),
       experienceYears: Number(experienceYears),
-      bio: bio || null,
-      primaryCity,
-      primaryState
+      bio: bio || undefined
     };
 
     const validation = registerWorkerSchema.safeParse(payload);
@@ -107,9 +103,7 @@
         skillIds: selectedSkillIds,
         hourlyRate: Number(hourlyRate),
         experienceYears: Number(experienceYears),
-        bio: bio || undefined,
-        primaryCity,
-        primaryState
+        bio: bio || undefined
       });
 
       toastStore.success('Worker account registered successfully! Complete your KYC next.', 'Welcome to BlueCollar');
@@ -199,7 +193,7 @@
               label="Password"
               type="password"
               placeholder="••••••••"
-              helper="Min 8 chars, uppercase, lowercase, number & special char"
+              helper="Min 8 chars, uppercase, digit & special char (@#$%^&+=!)"
               bind:value={password}
               error={formErrors.password}
               required
@@ -287,12 +281,11 @@
               <Input
                 label="Base Hourly Rate (₹)"
                 type="number"
-                min="100"
-                max="10000"
+                min="1"
                 step="50"
                 bind:value={hourlyRate}
                 error={formErrors.hourlyRate}
-                helper="Between ₹100 and ₹10,000"
+                helper="Positive amount in INR"
                 required
               />
 
@@ -313,30 +306,6 @@
               rows={3}
               bind:value={bio}
               error={formErrors.bio}
-            />
-          </div>
-        </div>
-
-        <!-- Location Section -->
-        <div>
-          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
-            3. Primary Operating Location
-          </h3>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="City"
-              placeholder="e.g. Bengaluru"
-              bind:value={primaryCity}
-              error={formErrors.primaryCity}
-              required
-            />
-            <Input
-              label="State"
-              placeholder="e.g. Karnataka"
-              bind:value={primaryState}
-              error={formErrors.primaryState}
-              required
             />
           </div>
         </div>

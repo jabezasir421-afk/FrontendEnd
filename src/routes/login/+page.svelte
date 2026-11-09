@@ -8,9 +8,9 @@
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
-  import { Hammer, Lock, Mail, ArrowRight } from 'lucide-svelte';
+  import { Hammer, ArrowRight } from 'lucide-svelte';
 
-  let email = $state('');
+  let identifier = $state('');
   let password = $state('');
   let loading = $state(false);
   let formErrors = $state<Record<string, string>>({});
@@ -19,7 +19,7 @@
     event.preventDefault();
     formErrors = {};
 
-    const validation = loginSchema.safeParse({ email, password });
+    const validation = loginSchema.safeParse({ identifier, password });
     if (!validation.success) {
       validation.error.errors.forEach((err) => {
         if (err.path[0]) {
@@ -31,7 +31,7 @@
 
     loading = true;
     try {
-      const auth = await authStore.login({ email, password });
+      const auth = await authStore.login({ identifier, password });
       toastStore.success('Signed in successfully!', 'Welcome back');
 
       const redirect = page.url.searchParams.get('redirect');
@@ -82,13 +82,13 @@
     <Card class="p-2 sm:p-4">
       <form onsubmit={handleSubmit} class="space-y-4">
         <Input
-          label="Email Address"
-          type="email"
-          placeholder="name@example.com"
-          bind:value={email}
-          error={formErrors.email}
+          label="Email or Phone Number"
+          type="text"
+          placeholder="name@example.com or 9876543210"
+          bind:value={identifier}
+          error={formErrors.identifier}
           required
-          autocomplete="email"
+          autocomplete="username"
         />
 
         <div class="space-y-1">

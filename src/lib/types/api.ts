@@ -385,31 +385,29 @@ export interface Page<T> {
 
 export interface RegisterCustomerRequest {
   email: string;
-  password: string;
   phoneNumber: string;
+  password: string;
   firstName: string;
   lastName: string;
 }
 
 export interface RegisterWorkerRequest {
   email: string;
-  password: string;
   phoneNumber: string;
+  password: string;
   firstName: string;
   lastName: string;
   gender?: Gender | null;
   dateOfBirth?: string | null;
-  categoryId: string;
-  skillIds: string[];
-  hourlyRate: number;
   experienceYears?: number | null;
   bio?: string | null;
-  primaryCity: string;
-  primaryState: string;
+  hourlyRate: number;
+  categoryId: string;
+  skillIds: string[];
 }
 
 export interface LoginRequest {
-  email: string;
+  identifier: string;
   password: string;
 }
 

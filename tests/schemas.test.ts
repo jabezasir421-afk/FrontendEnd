@@ -12,20 +12,32 @@ import { addressSchema } from '../src/lib/schemas/address';
 
 describe('Zod Domain Validation Schemas', () => {
   describe('Auth Schemas', () => {
-    it('validates a valid login payload', () => {
-      const result = loginSchema.safeParse({
-        email: 'user@example.com',
+    it('validates a valid login payload with email or phone identifier', () => {
+      const emailResult = loginSchema.safeParse({
+        identifier: 'user@example.com',
         password: 'Password@123'
       });
-      expect(result.success).toBe(true);
+      expect(emailResult.success).toBe(true);
+
+      const phoneResult = loginSchema.safeParse({
+        identifier: '9876543210',
+        password: 'Password@123'
+      });
+      expect(phoneResult.success).toBe(true);
     });
 
-    it('rejects invalid email in login', () => {
-      const result = loginSchema.safeParse({
-        email: 'not-an-email',
+    it('rejects empty identifier or empty password in login', () => {
+      const emptyIdentifier = loginSchema.safeParse({
+        identifier: '',
         password: 'Password@123'
       });
-      expect(result.success).toBe(false);
+      expect(emptyIdentifier.success).toBe(false);
+
+      const emptyPassword = loginSchema.safeParse({
+        identifier: 'user@example.com',
+        password: ''
+      });
+      expect(emptyPassword.success).toBe(false);
     });
 
     it('validates Indian phone numbers in customer registration', () => {
@@ -61,7 +73,7 @@ describe('Zod Domain Validation Schemas', () => {
       expect(result.success).toBe(false);
     });
 
-    it('validates worker registration requirements', () => {
+    it('validates worker registration requirements without primaryCity/primaryState', () => {
       const validWorker = {
         firstName: 'Amit',
         lastName: 'Sharma',
@@ -72,20 +84,18 @@ describe('Zod Domain Validation Schemas', () => {
         categoryId: 'cat-uuid-1',
         skillIds: ['skill-uuid-1', 'skill-uuid-2'],
         hourlyRate: 350,
-        experienceYears: 5,
-        primaryCity: 'Bengaluru',
-        primaryState: 'Karnataka'
+        experienceYears: 5
       };
 
       const result = registerWorkerSchema.safeParse(validWorker);
       expect(result.success).toBe(true);
 
-      // Fails if hourlyRate < 100
-      const lowRate = registerWorkerSchema.safeParse({
+      // Fails if hourlyRate <= 0
+      const invalidRate = registerWorkerSchema.safeParse({
         ...validWorker,
-        hourlyRate: 50
+        hourlyRate: -10
       });
-      expect(lowRate.success).toBe(false);
+      expect(invalidRate.success).toBe(false);
     });
   });
 

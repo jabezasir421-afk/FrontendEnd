@@ -74,7 +74,7 @@ describe('End-to-End Business Integration Flows', () => {
       });
 
       const authRes = await authApi.login({
-        email: 'customer@example.com',
+        identifier: 'customer@example.com',
         password: 'Password@123'
       });
       expect(authRes.accessToken).toBe('access_jwt_cust_123');
