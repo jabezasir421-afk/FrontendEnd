@@ -249,12 +249,19 @@ describe('End-to-End Business Integration Flows', () => {
         id: 'review-uuid-999',
         bookingId: completedBooking.id,
         workerId: 'worker-uuid-456',
-        workerName: 'Rajesh Sharma',
-        customerId: 'cust-uuid-1',
-        customerName: 'Ananya Patel',
+        customer: {
+          id: 'cust-uuid-1',
+          firstName: 'Ananya',
+          lastName: 'Patel',
+          phoneNumber: '+919999999999',
+          email: 'ananya@example.com',
+          profilePhotoUrl: null
+        },
         rating: 5,
+        active: true,
         comment: 'Excellent plumbing repair. Clean, punctual, and professional.',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
       fetchMock.mockResolvedValueOnce({
@@ -271,7 +278,7 @@ describe('End-to-End Business Integration Flows', () => {
       });
 
       expect(reviewRes.rating).toBe(5);
-      expect(reviewRes.workerName).toBe('Rajesh Sharma');
+      expect(reviewRes.customer.firstName).toBe('Ananya');
     });
   });
 

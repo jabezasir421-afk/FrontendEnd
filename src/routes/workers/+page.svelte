@@ -1,19 +1,25 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { searchApi } from '$lib/api/search';
   import { categoriesApi } from '$lib/api/categories';
+  import { skillsApi } from '$lib/api/skills';
+  import {
+    catalogQueryKeys,
+    getActiveCategories,
+    getActiveSkills,
+    getCatalogErrorMessage
+  } from '$lib/api/catalog';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import Pagination from '$lib/components/ui/Pagination.svelte';
   import EmptyState from '$lib/components/ui/EmptyState.svelte';
-  import type {
-    WorkerSearchResultResponse,
-    CategoryResponse
-  } from '$lib/types/api';
+  import type { WorkerSearchResultResponse } from '$lib/types/api';
   import {
     Search,
     MapPin,
@@ -28,11 +34,16 @@
   // State variables for filters
   let city = $state('');
   let categoryId = $state('');
+  let skillIds = $state<string[]>([]);
+  let matchAnySkill = $state(false);
   let minRating = $state<number | undefined>(undefined);
+  let minExperience = $state<number | undefined>(undefined);
+  let maxExperience = $state<number | undefined>(undefined);
   let minPrice = $state<number | undefined>(undefined);
   let maxPrice = $state<number | undefined>(undefined);
   let availableOnly = $state(false);
-  let sortOption = $state('averageRating');
+  let verified = $state(true);
+  let sortOption = $state<'rating' | 'price' | 'experience' | 'createdAt'>('rating');
   let sortDirection = $state<'asc' | 'desc'>('desc');
   let currentPage = $state(0);
   let pageSize = 12;
@@ -42,45 +53,67 @@
   let totalElements = $state(0);
   let totalPages = $state(0);
   let loading = $state(true);
-  let categories = $state<CategoryResponse[]>([]);
+  const categoriesQuery = createQuery({
+    queryKey: catalogQueryKeys.categories(),
+    queryFn: () => categoriesApi.getAll(0, 100),
+    enabled: browser
+  });
+  const skillsQuery = createQuery({
+    queryKey: catalogQueryKeys.skills(),
+    queryFn: () => skillsApi.getAll(0, 100),
+    enabled: browser
+  });
+  let categories = $derived(getActiveCategories($categoriesQuery.data?.content));
+  let skills = $derived(getActiveSkills($skillsQuery.data?.content));
   let showMobileFilters = $state(false);
+  let searchError = $state<string | null>(null);
 
   // Sync state with URL params
   function readParamsFromUrl() {
     const params = page.url.searchParams;
     city = params.get('city') || '';
     categoryId = params.get('categoryId') || '';
+    skillIds = params.getAll('skillIds');
+    matchAnySkill = params.get('matchAnySkill') === 'true';
     const ratingParam = params.get('minRating');
     minRating = ratingParam ? Number(ratingParam) : undefined;
+    const minExp = params.get('minExperience');
+    minExperience = minExp ? Number(minExp) : undefined;
+    const maxExp = params.get('maxExperience');
+    maxExperience = maxExp ? Number(maxExp) : undefined;
     const minP = params.get('minPrice');
     minPrice = minP ? Number(minP) : undefined;
     const maxP = params.get('maxPrice');
     maxPrice = maxP ? Number(maxP) : undefined;
     availableOnly = params.get('available') === 'true';
-    sortOption = params.get('sort') || 'averageRating';
+    verified = params.get('verified') !== 'false';
+    const requestedSort = params.get('sort');
+    sortOption =
+      requestedSort === 'price' ||
+      requestedSort === 'experience' ||
+      requestedSort === 'createdAt'
+        ? requestedSort
+        : 'rating';
     sortDirection = (params.get('direction') as 'asc' | 'desc') || 'desc';
     currentPage = Number(params.get('page') || 0);
-  }
-
-  async function fetchCategories() {
-    try {
-      const res = await categoriesApi.getAll(0, 100);
-      categories = res?.content?.filter((c) => c.active) || [];
-    } catch {
-      // Ignore
-    }
   }
 
   async function fetchWorkers() {
     loading = true;
     try {
+      searchError = null;
       const res = await searchApi.searchWorkers({
         city: city || undefined,
         categoryId: categoryId || undefined,
+        skillIds: skillIds.length ? skillIds : undefined,
+        matchAnySkill: skillIds.length ? matchAnySkill : undefined,
         minRating: minRating || undefined,
+        minExperience,
+        maxExperience,
         minPrice: minPrice || undefined,
         maxPrice: maxPrice || undefined,
         available: availableOnly ? true : undefined,
+        verified,
         sort: sortOption,
         direction: sortDirection,
         page: currentPage,
@@ -90,10 +123,11 @@
       workers = res?.results || [];
       totalElements = res?.totalElements || 0;
       totalPages = Math.ceil(totalElements / pageSize) || 1;
-    } catch {
+    } catch (err) {
       workers = [];
       totalElements = 0;
       totalPages = 1;
+      searchError = err instanceof Error ? err.message : 'Could not load workers. Please try again.';
     } finally {
       loading = false;
     }
@@ -103,10 +137,15 @@
     const params = new URLSearchParams();
     if (city.trim()) params.set('city', city.trim());
     if (categoryId) params.set('categoryId', categoryId);
+    skillIds.forEach((id) => params.append('skillIds', id));
+    if (skillIds.length && matchAnySkill) params.set('matchAnySkill', 'true');
     if (minRating) params.set('minRating', String(minRating));
+    if (minExperience !== undefined) params.set('minExperience', String(minExperience));
+    if (maxExperience !== undefined) params.set('maxExperience', String(maxExperience));
     if (minPrice !== undefined && minPrice > 0) params.set('minPrice', String(minPrice));
     if (maxPrice !== undefined && maxPrice > 0) params.set('maxPrice', String(maxPrice));
     if (availableOnly) params.set('available', 'true');
+    if (!verified) params.set('verified', 'false');
     params.set('sort', sortOption);
     params.set('direction', sortDirection);
     params.set('page', '0');
@@ -128,11 +167,16 @@
   function resetFilters() {
     city = '';
     categoryId = '';
+    skillIds = [];
+    matchAnySkill = false;
     minRating = undefined;
+    minExperience = undefined;
+    maxExperience = undefined;
     minPrice = undefined;
     maxPrice = undefined;
     availableOnly = false;
-    sortOption = 'averageRating';
+    verified = true;
+    sortOption = 'rating';
     sortDirection = 'desc';
     currentPage = 0;
     goto('/workers');
@@ -141,7 +185,6 @@
 
   onMount(async () => {
     readParamsFromUrl();
-    await fetchCategories();
     await fetchWorkers();
   });
 </script>
@@ -178,7 +221,7 @@
 
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
     <!-- Desktop Filters Sidebar -->
-    <aside class="hidden lg:block space-y-6">
+    <aside class="space-y-6 {showMobileFilters ? '' : 'hidden'} lg:block">
       <Card class="p-5 space-y-5">
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
           <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
@@ -192,6 +235,33 @@
             <RotateCcw class="w-3 h-3 mr-1" />
             Reset
           </button>
+        </div>
+
+        <!-- Skills Filter -->
+        <div class="space-y-2">
+          <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Skills</span>
+          <div class="max-h-36 overflow-y-auto space-y-1.5 rounded-xl border border-slate-200 dark:border-slate-700 p-2">
+            {#each skills as skill (skill.id)}
+              <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={skillIds.includes(skill.id)}
+                  onchange={() =>
+                    (skillIds = skillIds.includes(skill.id)
+                      ? skillIds.filter((id) => id !== skill.id)
+                      : [...skillIds, skill.id])}
+                  class="rounded text-primary-600 focus:ring-primary-500"
+                />
+                <span>{skill.name}</span>
+              </label>
+            {/each}
+          </div>
+          {#if skillIds.length > 1}
+            <label class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <input type="checkbox" bind:checked={matchAnySkill} class="rounded text-primary-600" />
+              Match any selected skill
+            </label>
+          {/if}
         </div>
 
         <!-- City Filter -->
@@ -208,6 +278,17 @@
               onkeydown={(e) => e.key === 'Enter' && applyFilters()}
               class="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
+          </div>
+
+          <!-- Experience Range -->
+          <div class="space-y-1.5">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 block">Experience (years)</span>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="number" min="0" placeholder="Min" bind:value={minExperience}
+                class="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+              <input type="number" min="0" placeholder="Max" bind:value={maxExperience}
+                class="w-full px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900" />
+            </div>
           </div>
         </div>
 
@@ -226,6 +307,14 @@
               <option value={cat.id}>{cat.name}</option>
             {/each}
           </select>
+          {#if $categoriesQuery.isError}
+            <p role="alert" class="mt-1 text-xs text-rose-600 dark:text-rose-400">
+              {getCatalogErrorMessage($categoriesQuery.error, 'categories')}
+              <button type="button" class="font-semibold underline" onclick={() => $categoriesQuery.refetch()}>
+                Retry
+              </button>
+            </p>
+          {/if}
         </div>
 
         <!-- Minimum Rating Filter -->
@@ -294,6 +383,10 @@
             />
             <span>Available for Bookings</span>
           </label>
+          <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer mt-3">
+            <input type="checkbox" bind:checked={verified} class="rounded text-primary-600 focus:ring-primary-500" />
+            Verified workers only
+          </label>
         </div>
 
         <Button
@@ -320,6 +413,15 @@
           {/if}
         </div>
 
+        {#if searchError}
+          <div role="alert" class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
+            <div class="flex items-center justify-between gap-4">
+              <span>{searchError}</span>
+              <Button variant="outline" size="sm" onclick={fetchWorkers}>Retry</Button>
+            </div>
+          </div>
+        {/if}
+
         <!-- Sort Select -->
         <div class="flex items-center gap-2">
           <span class="text-xs text-slate-500 whitespace-nowrap">Sort by:</span>
@@ -328,9 +430,9 @@
             onchange={applyFilters}
             class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer"
           >
-            <option value="averageRating">Highest Rating</option>
-            <option value="hourlyRate">Hourly Rate</option>
-            <option value="experienceYears">Experience</option>
+            <option value="rating">Highest Rating</option>
+            <option value="price">Hourly Rate</option>
+            <option value="experience">Experience</option>
             <option value="createdAt">Newest Joined</option>
           </select>
           <select

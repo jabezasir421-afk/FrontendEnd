@@ -138,14 +138,14 @@ export interface PublicWorkerResponse {
   gender: Gender | null;
   experienceYears: number | null;
   bio: string | null;
-  hourlyRate: number;
+  hourlyRate: number | null;
   available: boolean;
   verified: boolean;
   active: boolean;
   categoryId: string;
   categoryName: string;
   skills: SkillResponse[];
-  averageRating: number;
+  averageRating: number | null;
   reviewCount: number;
   createdAt: string;
   updatedAt: string;
@@ -154,10 +154,10 @@ export interface PublicWorkerResponse {
 export interface WorkerSearchResultResponse {
   id: string;
   fullName: string;
-  primaryCity: string;
+  primaryCity: string | null;
   categoryName: string;
-  hourlyRate: number;
-  averageRating: number;
+  hourlyRate: number | null;
+  averageRating: number | null;
   reviewCount: number;
   available: boolean;
   verified: boolean;
@@ -222,18 +222,18 @@ export interface ReviewResponse {
   id: string;
   bookingId: string;
   workerId: string;
-  workerName: string;
-  customerId: string;
-  customerName: string;
+  customer: CustomerSummaryResponse;
   rating: number;
+  active: boolean;
   comment: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface ReviewStatsResponse {
-  averageRating: number;
+  averageRating: number | null;
   totalReviews: number;
-  ratingDistribution: Record<number, number>;
+  ratingDistribution: Record<string, number>;
 }
 
 // Availability DTOs
@@ -591,7 +591,7 @@ export interface WorkerSearchParams {
   minPrice?: number;
   maxPrice?: number;
   verified?: boolean;
-  sort?: string;
+  sort?: 'rating' | 'price' | 'experience' | 'createdAt';
   direction?: 'asc' | 'desc';
   page?: number;
   size?: number;

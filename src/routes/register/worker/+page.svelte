@@ -1,9 +1,17 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
+  import { createQuery } from '@tanstack/svelte-query';
   import { authStore } from '$lib/stores/auth.svelte';
   import { toastStore } from '$lib/stores/toast.svelte';
   import { categoriesApi } from '$lib/api/categories';
   import { skillsApi } from '$lib/api/skills';
+  import {
+    catalogQueryKeys,
+    getActiveCategories,
+    getActiveSkills,
+    getCatalogErrorMessage,
+    hasValidWorkerCatalogSelection
+  } from '$lib/api/catalog';
   import { registerWorkerSchema } from '$lib/schemas/auth';
   import { ApiError } from '$lib/api/client';
   import { goto } from '$app/navigation';
@@ -13,7 +21,6 @@
   import Select from '$lib/components/ui/Select.svelte';
   import Textarea from '$lib/components/ui/Textarea.svelte';
   import { Hammer, ArrowRight, Check } from 'lucide-svelte';
-  import type { CategoryResponse, SkillResponse } from '$lib/types/api';
 
   let firstName = $state('');
   let lastName = $state('');
@@ -28,27 +35,32 @@
   let experienceYears = $state<number>(3);
   let bio = $state('');
 
-  let categories = $state<CategoryResponse[]>([]);
-  let skills = $state<SkillResponse[]>([]);
-  let loadingData = $state(true);
+  const categoriesQuery = createQuery({
+    queryKey: catalogQueryKeys.categories(),
+    queryFn: () => categoriesApi.getAll(0, 100),
+    enabled: browser
+  });
+  const skillsQuery = createQuery({
+    queryKey: catalogQueryKeys.skills(),
+    queryFn: () => skillsApi.getAll(0, 100),
+    enabled: browser
+  });
+  let categories = $derived(getActiveCategories($categoriesQuery.data?.content));
+  let skills = $derived(getActiveSkills($skillsQuery.data?.content));
+  let loadingData = $derived($categoriesQuery.isPending || $skillsQuery.isPending);
+  let catalogsAvailable = $derived(
+    !loadingData &&
+      !$categoriesQuery.isError &&
+      !$skillsQuery.isError &&
+      categories.length > 0 &&
+      skills.length > 0
+  );
   let submitting = $state(false);
   let formErrors = $state<Record<string, string>>({});
 
-  onMount(async () => {
-    try {
-      const [catsPage, skillsPage] = await Promise.all([
-        categoriesApi.getAll(0, 100),
-        skillsApi.getAll(0, 100)
-      ]);
-      categories = catsPage?.content?.filter((c) => c.active) || [];
-      skills = skillsPage?.content?.filter((s) => s.active) || [];
-      if (categories.length > 0 && !categoryId) {
-        categoryId = categories[0].id;
-      }
-    } catch {
-      toastStore.error('Failed to load categories and skills. Please refresh the page.', 'Data Load Error');
-    } finally {
-      loadingData = false;
+  $effect(() => {
+    if (!categoryId && categories.length > 0) {
+      categoryId = categories[0].id;
     }
   });
 
@@ -63,6 +75,20 @@
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault();
     formErrors = {};
+
+    if (!catalogsAvailable) {
+      toastStore.error('Categories and skills must be available before registration.', 'Catalog Data Unavailable');
+      return;
+    }
+
+    if (!hasValidWorkerCatalogSelection(categories, skills, categoryId, selectedSkillIds)) {
+      formErrors.categoryId = categories.some((category) => category.id === categoryId)
+        ? ''
+        : 'Please select an active category.';
+      formErrors.skillIds = 'Select one or more active skills.';
+      toastStore.warning('Please select a valid category and active skills.', 'Validation Error');
+      return;
+    }
 
     const payload = {
       firstName,
@@ -239,6 +265,16 @@
               placeholder="Select trade category"
               options={categories.map((c) => ({ value: c.id, label: c.name }))}
             />
+            {#if $categoriesQuery.isError}
+              <div role="alert" class="text-xs text-rose-600 dark:text-rose-400">
+                <p>{getCatalogErrorMessage($categoriesQuery.error, 'categories')}</p>
+                <button type="button" class="mt-1 font-semibold underline" onclick={() => $categoriesQuery.refetch()}>
+                  Retry loading categories
+                </button>
+              </div>
+            {:else if !$categoriesQuery.isPending && categories.length === 0}
+              <p role="status" class="text-xs text-slate-500">No active categories are available right now.</p>
+            {/if}
 
             <!-- Skills Selection Chips -->
             <div>
@@ -252,8 +288,15 @@
               <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
                 {#if loadingData}
                   <p class="text-xs text-slate-400 p-2">Loading skills...</p>
+                {:else if $skillsQuery.isError}
+                  <div role="alert" class="text-xs text-rose-600 dark:text-rose-400 p-2">
+                    <p>{getCatalogErrorMessage($skillsQuery.error, 'skills')}</p>
+                    <button type="button" class="mt-1 font-semibold underline" onclick={() => $skillsQuery.refetch()}>
+                      Retry loading skills
+                    </button>
+                  </div>
                 {:else if skills.length === 0}
-                  <p class="text-xs text-slate-400 p-2">No skills available.</p>
+                  <p role="status" class="text-xs text-slate-400 p-2">No active skills are available right now.</p>
                 {:else}
                   {#each skills as skill (skill.id)}
                     {@const isSelected = selectedSkillIds.includes(skill.id)}
@@ -315,6 +358,7 @@
           variant="primary"
           class="w-full py-3 text-base"
           loading={submitting}
+          disabled={!catalogsAvailable || submitting}
         >
           Submit Worker Registration
           <ArrowRight class="w-4 h-4 ml-2" />
