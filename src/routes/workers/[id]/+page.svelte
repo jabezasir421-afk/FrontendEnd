@@ -8,6 +8,7 @@
   import Badge from '$lib/components/ui/Badge.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import Modal from '$lib/components/ui/Modal.svelte';
+  import Pagination from '$lib/components/ui/Pagination.svelte';
   import type {
     PublicWorkerResponse,
     PublicPortfolioResponse,
@@ -38,6 +39,9 @@
   let portfolio = $state<PublicPortfolioResponse | null>(null);
   let reviewStats = $state<ReviewStatsResponse | null>(null);
   let reviews = $state<ReviewResponse[]>([]);
+  let reviewPage = $state(0);
+  let reviewTotalPages = $state(0);
+  let reviewTotalElements = $state(0);
   let loading = $state(true);
   let error = $state<string | null>(null);
 
@@ -51,7 +55,16 @@
         workersApi.getPublicAvailability(workerId).catch(() => null),
         workersApi.getPublicPortfolio(workerId).catch(() => null),
         reviewsApi.getWorkerStats(workerId).catch(() => null),
-        reviewsApi.getWorkerReviews(workerId, 0, 10).catch(() => ({ content: [] }))
+        reviewsApi.getWorkerReviews(workerId, reviewPage, 10).catch(() => ({
+          content: [],
+          totalPages: 0,
+          totalElements: 0,
+          size: 10,
+          number: reviewPage,
+          first: true,
+          last: true,
+          empty: true
+        }))
       ]);
 
       worker = w;
@@ -59,12 +72,22 @@
       portfolio = p;
       reviewStats = rs;
       reviews = r?.content || [];
+      reviewTotalPages = r?.totalPages || 0;
+      reviewTotalElements = r?.totalElements || 0;
     } catch {
       error = 'Could not load worker profile. The worker may not exist or is inactive.';
     } finally {
       loading = false;
     }
   });
+
+  async function loadReviews(nextPage: number) {
+    const result = await reviewsApi.getWorkerReviews(workerId, nextPage, 10);
+    reviewPage = result.number;
+    reviews = result.content;
+    reviewTotalPages = result.totalPages;
+    reviewTotalElements = result.totalElements;
+  }
 </script>
 
 <svelte:head>
@@ -142,7 +165,7 @@
         <div>
           <span class="text-xs text-slate-400 block md:text-right">Standard Rate</span>
           <span class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-            ₹{worker.hourlyRate}
+            {worker.hourlyRate === null ? 'Rate on request' : `₹${worker.hourlyRate}`}
             <span class="text-xs font-normal text-slate-500">/hr</span>
           </span>
         </div>
@@ -248,7 +271,7 @@
                 {/each}
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400">
-                {reviewStats?.totalReviews || 0} customer reviews
+                {reviewTotalElements || reviewStats?.totalReviews || 0} customer reviews
               </p>
             </div>
 
@@ -281,10 +304,10 @@
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <div class="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                        {review.customerName ? review.customerName.charAt(0) : 'C'}
+                        {review.customer?.firstName ? review.customer.firstName.charAt(0) : 'C'}
                       </div>
                       <span class="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                        {review.customerName || 'Verified Customer'}
+                        {review.customer ? `${review.customer.firstName} ${review.customer.lastName}` : 'Verified Customer'}
                       </span>
                     </div>
                     <span class="text-[11px] text-slate-400">
@@ -304,6 +327,15 @@
                 </div>
               {/each}
             </div>
+            {#if reviewTotalPages > 1}
+              <Pagination
+                page={reviewPage}
+                totalPages={reviewTotalPages}
+                totalElements={reviewTotalElements}
+                size={10}
+                onPageChange={loadReviews}
+              />
+            {/if}
           {/if}
         </Card>
       </div>
