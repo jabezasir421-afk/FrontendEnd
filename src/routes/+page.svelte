@@ -1,11 +1,17 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { browser } from '$app/environment';
   import { goto } from '$app/navigation';
+  import { createQuery } from '@tanstack/svelte-query';
   import { categoriesApi } from '$lib/api/categories';
+  import {
+    buildWorkerSearchUrl,
+    catalogQueryKeys,
+    getActiveCategories,
+    getCatalogErrorMessage
+  } from '$lib/api/catalog';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
-  import type { CategoryResponse } from '$lib/types/api';
   import {
     Search,
     ShieldCheck,
@@ -21,28 +27,18 @@
     Hammer
   } from 'lucide-svelte';
 
-  let categories = $state<CategoryResponse[]>([]);
-  let loadingCategories = $state(true);
+  const categoriesQuery = createQuery({
+    queryKey: catalogQueryKeys.categories(),
+    queryFn: () => categoriesApi.getAll(0, 100),
+    enabled: browser
+  });
+  let categories = $derived(getActiveCategories($categoriesQuery.data?.content).slice(0, 12));
   let searchCity = $state('');
   let searchCategoryId = $state('');
 
-  onMount(async () => {
-    try {
-      const res = await categoriesApi.getAll(0, 12);
-      categories = res?.content?.filter((c) => c.active) || [];
-    } catch {
-      // Graceful fallback
-    } finally {
-      loadingCategories = false;
-    }
-  });
-
   function handleSearch(e: SubmitEvent) {
     e.preventDefault();
-    const params = new URLSearchParams();
-    if (searchCity.trim()) params.set('city', searchCity.trim());
-    if (searchCategoryId) params.set('categoryId', searchCategoryId);
-    goto(`/workers?${params.toString()}`);
+    goto(buildWorkerSearchUrl(searchCity, searchCategoryId));
   }
 
   const categoryIcons: Record<string, typeof Wrench> = {
@@ -143,11 +139,20 @@
       </a>
     </div>
 
-    {#if loadingCategories}
+    {#if $categoriesQuery.isPending}
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {#each Array(8) as _}
           <Skeleton class="h-28 rounded-2xl" />
         {/each}
+      </div>
+    {:else if $categoriesQuery.isError}
+      <div role="alert" class="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-rose-200 dark:border-rose-900">
+        <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">
+          {getCatalogErrorMessage($categoriesQuery.error, 'categories')}
+        </p>
+        <Button type="button" variant="outline" onclick={() => $categoriesQuery.refetch()}>
+          Try again
+        </Button>
       </div>
     {:else if categories.length === 0}
       <div class="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -158,7 +163,7 @@
         {#each categories as cat (cat.id)}
           {@const Icon = categoryIcons[cat.name] || Wrench}
           <a
-            href={`/workers?categoryId=${cat.id}`}
+            href={buildWorkerSearchUrl('', cat.id)}
             class="group p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs hover:shadow-md hover:border-primary-400 dark:hover:border-primary-600 transition-all"
           >
             <div class="w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-950 text-primary-600 dark:text-primary-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">

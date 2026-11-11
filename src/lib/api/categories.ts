@@ -1,13 +1,37 @@
 import { api } from './client';
+import { parseCatalogItem, parseCatalogPage, type CatalogQueryParams } from './catalog';
 import type { CategoryResponse, Page } from '$lib/types/api';
 
 export const categoriesApi = {
-  getAll: (page = 0, size = 50, sort = 'name', direction = 'asc') =>
-    api.get<Page<CategoryResponse>>('/categories', {
-      params: { page, size, sort: `${sort},${direction}` },
-      skipAuth: true
-    }),
+  getAll: async (
+    pageOrParams: number | CatalogQueryParams = 0,
+    size = 50,
+    sort = 'name',
+    direction: 'asc' | 'desc' = 'asc'
+  ): Promise<Page<CategoryResponse>> => {
+    let page = 0;
+    let actualSize = size;
+    let actualSort = sort;
+    let actualDirection = direction;
 
-  getById: (id: string) =>
-    api.get<CategoryResponse>(`/categories/${id}`, { skipAuth: true })
+    if (typeof pageOrParams === 'object' && pageOrParams !== null) {
+      page = pageOrParams.page ?? 0;
+      actualSize = pageOrParams.size ?? 50;
+      actualSort = pageOrParams.sort ?? 'name';
+      actualDirection = pageOrParams.direction ?? 'asc';
+    } else {
+      page = pageOrParams;
+    }
+
+    const response = await api.get<unknown>('/categories', {
+      params: { page, size: actualSize, sort: `${actualSort},${actualDirection}` },
+      skipAuth: true
+    });
+    return parseCatalogPage<CategoryResponse>(response, 'categories');
+  },
+
+  getById: async (id: string): Promise<CategoryResponse> => {
+    const response = await api.get<unknown>(`/categories/${id}`, { skipAuth: true });
+    return parseCatalogItem<CategoryResponse>(response, 'categories');
+  }
 };

@@ -1,19 +1,23 @@
 <script lang="ts">
+  import { browser } from '$app/environment';
   import { onMount } from 'svelte';
+  import { createQuery } from '@tanstack/svelte-query';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { searchApi } from '$lib/api/search';
   import { categoriesApi } from '$lib/api/categories';
+  import {
+    catalogQueryKeys,
+    getActiveCategories,
+    getCatalogErrorMessage
+  } from '$lib/api/catalog';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
   import Skeleton from '$lib/components/ui/Skeleton.svelte';
   import Pagination from '$lib/components/ui/Pagination.svelte';
   import EmptyState from '$lib/components/ui/EmptyState.svelte';
-  import type {
-    WorkerSearchResultResponse,
-    CategoryResponse
-  } from '$lib/types/api';
+  import type { WorkerSearchResultResponse } from '$lib/types/api';
   import {
     Search,
     MapPin,
@@ -42,7 +46,12 @@
   let totalElements = $state(0);
   let totalPages = $state(0);
   let loading = $state(true);
-  let categories = $state<CategoryResponse[]>([]);
+  const categoriesQuery = createQuery({
+    queryKey: catalogQueryKeys.categories(),
+    queryFn: () => categoriesApi.getAll(0, 100),
+    enabled: browser
+  });
+  let categories = $derived(getActiveCategories($categoriesQuery.data?.content));
   let showMobileFilters = $state(false);
 
   // Sync state with URL params
@@ -60,15 +69,6 @@
     sortOption = params.get('sort') || 'averageRating';
     sortDirection = (params.get('direction') as 'asc' | 'desc') || 'desc';
     currentPage = Number(params.get('page') || 0);
-  }
-
-  async function fetchCategories() {
-    try {
-      const res = await categoriesApi.getAll(0, 100);
-      categories = res?.content?.filter((c) => c.active) || [];
-    } catch {
-      // Ignore
-    }
   }
 
   async function fetchWorkers() {
@@ -141,7 +141,6 @@
 
   onMount(async () => {
     readParamsFromUrl();
-    await fetchCategories();
     await fetchWorkers();
   });
 </script>
@@ -226,6 +225,14 @@
               <option value={cat.id}>{cat.name}</option>
             {/each}
           </select>
+          {#if $categoriesQuery.isError}
+            <p role="alert" class="mt-1 text-xs text-rose-600 dark:text-rose-400">
+              {getCatalogErrorMessage($categoriesQuery.error, 'categories')}
+              <button type="button" class="font-semibold underline" onclick={() => $categoriesQuery.refetch()}>
+                Retry
+              </button>
+            </p>
+          {/if}
         </div>
 
         <!-- Minimum Rating Filter -->
