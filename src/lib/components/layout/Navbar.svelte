@@ -15,7 +15,8 @@
     MapPin,
     Briefcase,
     Search,
-    ChevronDown
+    ChevronDown,
+    FileCheck
   } from 'lucide-svelte';
 
   let mobileMenuOpen = $state(false);
@@ -138,6 +139,16 @@
             >
               Portfolio & KYC
             </a>
+          {:else if authStore.isAdmin}
+            <a
+              href="/admin/documents"
+              class="px-3 py-2 text-sm font-medium rounded-lg flex items-center gap-1.5 transition-colors {isActive('/admin/documents')
+                ? 'text-primary-600 bg-primary-50 dark:bg-primary-950/50 dark:text-primary-400'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}"
+            >
+              <FileCheck class="w-4 h-4" />
+              Verification Queue
+            </a>
           {/if}
         </nav>
       </div>
@@ -217,6 +228,15 @@
                   >
                     <User class="w-4 h-4 text-slate-400" />
                     My Profile
+                  </a>
+                {:else if authStore.isAdmin}
+                  <a
+                    href="/admin/documents"
+                    onclick={() => (userMenuOpen = false)}
+                    class="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    <FileCheck class="w-4 h-4 text-slate-400" />
+                    Verification Queue
                   </a>
                 {/if}
 
@@ -350,6 +370,15 @@
             class="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
           >
             Portfolio & KYC
+          </a>
+        {:else if authStore.isAdmin}
+          <a
+            href="/admin/documents"
+            onclick={() => (mobileMenuOpen = false)}
+            class="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium"
+          >
+            <FileCheck class="w-4 h-4 text-slate-400" />
+            Verification Queue
           </a>
         {/if}
 

@@ -5,6 +5,7 @@
   import { ApiError } from '$lib/api/client';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
+  import { getSafeRedirect } from '$lib/utils/guard';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
@@ -34,9 +35,13 @@
       const auth = await authStore.login({ identifier, password });
       toastStore.success('Signed in successfully!', 'Welcome back');
 
-      const redirect = page.url.searchParams.get('redirect');
-      if (redirect) {
-        goto(redirect);
+      const rawRedirect = page.url.searchParams.get('redirect');
+      const safeRedirect = getSafeRedirect(rawRedirect);
+
+      if (safeRedirect) {
+        goto(safeRedirect);
+      } else if (auth.role === 'ADMIN') {
+        goto('/admin/documents');
       } else if (auth.role === 'CUSTOMER') {
         goto('/customer/dashboard');
       } else if (auth.role === 'WORKER') {
