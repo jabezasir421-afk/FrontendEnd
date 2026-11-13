@@ -20,6 +20,9 @@ export const filesApi = {
   getById: (id: string) =>
     api.get<StoredFileResponse>(`/files/${id}`),
 
+  downloadBlob: (id: string) =>
+    api.getBlob(`/files/${encodeURIComponent(id)}/download`),
+
   getDownloadUrl: (id: string) => {
     const baseUrl = import.meta.env.PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
     return `${baseUrl}/files/${id}/download`;

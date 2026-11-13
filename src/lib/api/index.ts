@@ -12,3 +12,4 @@ export * from './portfolio';
 export * from './customers';
 export * from './files';
 export * from './notifications';
+export * from './admin';

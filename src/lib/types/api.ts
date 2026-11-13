@@ -55,9 +55,10 @@ export type EntityType =
 export type IdentityDocumentType =
   | 'AADHAAR'
   | 'PAN'
-  | 'VOTER_ID'
-  | 'PASSPORT'
-  | 'DRIVING_LICENSE';
+  | 'DRIVING_LICENSE'
+  | 'OTHER';
+
+export type DocumentType = IdentityDocumentType;
 
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
@@ -136,6 +137,29 @@ export interface PublicWorkerResponse {
   firstName: string;
   lastName: string;
   gender: Gender | null;
+  experienceYears: number | null;
+  bio: string | null;
+  hourlyRate: number | null;
+  available: boolean;
+  verified: boolean;
+  active: boolean;
+  categoryId: string;
+  categoryName: string;
+  skills: SkillResponse[];
+  averageRating: number | null;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkerResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  email: string | null;
+  gender: Gender | null;
+  dateOfBirth: string | null;
   experienceYears: number | null;
   bio: string | null;
   hourlyRate: number | null;
@@ -595,4 +619,36 @@ export interface WorkerSearchParams {
   direction?: 'asc' | 'desc';
   page?: number;
   size?: number;
+}
+
+// ==========================================
+// Admin DTOs
+// ==========================================
+
+export interface AdminIdentityDocumentResponse {
+  id: string;
+  workerId: string | null;
+  workerName: string | null;
+  fileId: string;
+  documentType: IdentityDocumentType;
+  maskedDocumentNumber: string | null;
+  verificationStatus: VerificationStatus;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
+export interface RejectDocumentRequest {
+  reason: string;
+}
+
+export interface LinkWorkerUserRequest {
+  userAccountId: string;
+}
+
+export interface AdminDocumentListParams {
+  page?: number;
+  size?: number;
+  sort?: string;
 }

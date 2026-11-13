@@ -30,6 +30,7 @@ class AuthState {
   isAuthenticated = $derived(this.token !== null && this.user !== null);
   isCustomer = $derived(this.role === 'CUSTOMER');
   isWorker = $derived(this.role === 'WORKER');
+  isAdmin = $derived(this.role === 'ADMIN');
   customerId = $derived(this.user?.customerId ?? null);
   workerId = $derived(this.user?.workerId ?? null);
 

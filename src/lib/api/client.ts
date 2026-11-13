@@ -146,6 +146,7 @@ export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null | (string | number)[]>;
   skipAuth?: boolean;
   _retry?: boolean;
+  responseType?: 'json' | 'blob' | 'text';
 }
 
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
@@ -217,7 +218,7 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
             body: requestBody,
             _retry: true
           } as RequestOptions);
-          return handleResponse<T>(retryResponse);
+          return handleResponse<T>(retryResponse, options.responseType);
         } else {
           const refreshErr = new ApiError({
             status: 401,
@@ -250,7 +251,7 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
                 body: requestBody,
                 _retry: true
               } as RequestOptions);
-              resolve(await handleResponse<T>(retryResponse));
+              resolve(await handleResponse<T>(retryResponse, options.responseType));
             } catch (err) {
               reject(err);
             }
@@ -263,10 +264,10 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     }
   }
 
-  return handleResponse<T>(response);
+  return handleResponse<T>(response, options.responseType);
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+async function handleResponse<T>(response: Response, responseType: 'json' | 'blob' | 'text' = 'json'): Promise<T> {
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
 
@@ -293,6 +294,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
   if (response.status === 204) {
     return null as unknown as T;
+  }
+
+  if (responseType === 'blob') {
+    return (await response.blob()) as unknown as T;
   }
 
   if (isJson) {
@@ -343,5 +348,8 @@ export const api = {
       ...options,
       method: 'POST',
       body: formData
-    })
+    }),
+
+  getBlob: (endpoint: string, options?: RequestOptions) =>
+    apiClient<Blob>(endpoint, { ...options, method: 'GET', responseType: 'blob' })
 };
